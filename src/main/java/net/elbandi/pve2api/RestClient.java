@@ -31,7 +31,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
-import org.apache.http.protocol.HTTP;
+import org.apache.http.protocol.BasicHttpContext;
 
 // Based on http://lukencode.com/2010/04/27/calling-web-services-in-android-using-httpclient/
 public class RestClient {
@@ -140,7 +140,7 @@ public class RestClient {
 
 		if (authentication) {
 			UsernamePasswordCredentials creds = new UsernamePasswordCredentials(username, password);
-			request.addHeader(new BasicScheme().authenticate(creds, request));
+			request.addHeader(new BasicScheme().authenticate(creds, request, new BasicHttpContext()));
 		}
 
 		return request;
