@@ -156,9 +156,9 @@ public class RestClient {
 
 		} else if (!params.isEmpty()) {
 			if (request instanceof HttpPost)
-				((HttpPost) request).setEntity(new UrlEncodedFormEntity(params, HTTP.UTF_8));
+				((HttpPost) request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
 			else if (request instanceof HttpPut)
-				((HttpPut) request).setEntity(new UrlEncodedFormEntity(params, HTTP.UTF_8));
+				((HttpPut) request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
 		}
 		return request;
 	}
