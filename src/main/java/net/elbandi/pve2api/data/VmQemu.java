@@ -21,26 +21,37 @@ public class VmQemu {
 	/* e.g ide0 */
 	private String bootdisk;
 	private int cores;
-	private int cpuunits;
+	/* Emulated CPU type */
+	private String cpu;
+	private int cpuunits = 1000;
 	private String desc;
 	private String digest;
 	private boolean freeze;
-
+	/* Enable/disable kvm virtualization */
 	private boolean kvm;
+
+	/* in mbytes */
 	private int memory;
 
 	private boolean onboot;
 	private String ostype;
 	private int sockets;
 
-
 	private Map<String, BlockDevice> blockDeviceMap = new HashMap<String, BlockDevice>();
-
-
 
 	private Map<String, Adapter> adapterMap = new HashMap<String, Adapter>();
 
+	public VmQemu(int vmid, String name){
+		this.vmid = vmid;
+		this.name = name;
+	}
 
+	public void addBlockDevice(BlockDevice device){
+		blockDeviceMap.put(device.getBus() + device.getDevice(), device);
+	}
+	public void addAdapter(Adapter adapter){
+		adapterMap.put(adapter.getBus() + adapter.getDevice(), adapter);
+	}
 	public Status getVmStatus() {
 		return vmStatus;
 	}
@@ -49,7 +60,6 @@ public class VmQemu {
 		this.vmStatus = vmStatus;
 	}
 
-	private Map<Integer, String> virtio = new HashMap<Integer, String>();
 
 	public Map<String, String> toMap() throws DeviceException{
 		Map<String, String> map = new HashMap<String, String>();
@@ -58,10 +68,16 @@ public class VmQemu {
 		map.put("boot", boot);
 		map.put("bootdisk", bootdisk);
 		if(cores > 0) map.put("cores", Integer.toString(cores));
+		if(cpu != null) map.put("cpu", cpu);
 		if (cpuunits > 0) map.put("cpuunits", Integer.toString(cpuunits));
-		if(desc != null) map.put("desc", desc);
+		if(desc != null) map.put("description", desc);
 		if(digest != null) map.put("digest", digest);
 		map.put("freeze", Boolean.toString(freeze));
+		if(memory > 0) map.put("memory", Integer.toString(memory));
+		map.put("kvm", Boolean.toString(kvm));
+		map.put("onboot", Boolean.toString(onboot));
+		if(ostype != null) map.put("ostype", ostype);
+
 		for(String device : blockDeviceMap.keySet()){
 			String blockDevice;
 			if(blockDeviceMap.get(device) instanceof QemuDisk){
@@ -309,10 +325,6 @@ public class VmQemu {
 	public int getSockets() {
 		return sockets;
 	}
-
-	public Map<Integer, String> getVirtio() {
-		return virtio;
-	}
 	public String getName() {
 		return name;
 	}
@@ -323,4 +335,13 @@ public class VmQemu {
 	public void setVmid(int vmid) {
 		this.vmid = vmid;
 	}
+
+	public Map<String, BlockDevice> getBlockDeviceMap() {
+		return blockDeviceMap;
+	}
+
+	public Map<String, Adapter> getAdapterMap() {
+		return adapterMap;
+	}
+
 }
