@@ -10,6 +10,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class VmQemu {
+	private int vmid;
 
 	private String name;
 	private Status vmStatus;
@@ -34,6 +35,9 @@ public class VmQemu {
 
 
 	private Map<String, BlockDevice> blockDeviceMap = new HashMap<String, BlockDevice>();
+
+
+
 	private Map<String, Adapter> adapterMap = new HashMap<String, Adapter>();
 
 
@@ -69,7 +73,10 @@ public class VmQemu {
 			}
 			map.put(device, blockDevice);
 		}
-
+		for(String adapter : adapterMap.keySet()){
+			map.put(adapter, adapterMap.get(adapter).getCreateString());
+		}
+		return  map;
 	}
 	public VmQemu(JSONObject data) throws JSONException {
 		acpi = data.optInt("acpi", 1) == 1;
@@ -141,7 +148,7 @@ public class VmQemu {
 		params.put("ha", Boolean.toString(this.ha));
 		if(this.maxdisk > 0) params.put("maxdisk", )
 	}*/
-	class DeviceException extends Exception {
+	public class DeviceException extends Exception {
 		public DeviceException() {
 			super();
 		}
@@ -308,5 +315,12 @@ public class VmQemu {
 	}
 	public String getName() {
 		return name;
+	}
+	public int getVmid() {
+		return vmid;
+	}
+
+	public void setVmid(int vmid) {
+		this.vmid = vmid;
 	}
 }

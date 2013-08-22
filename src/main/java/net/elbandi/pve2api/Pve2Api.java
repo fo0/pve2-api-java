@@ -20,6 +20,7 @@ import net.elbandi.pve2api.data.Storage;
 import net.elbandi.pve2api.data.Task;
 import net.elbandi.pve2api.data.VmOpenvz;
 import net.elbandi.pve2api.data.VmQemu;
+
 import net.elbandi.pve2api.data.VncData;
 
 import org.json.JSONArray;
@@ -332,11 +333,9 @@ public class Pve2Api {
 	}
 
 	// TODO: QemuCreate(String node, int vmid, params)
-	public String createQemu(String node, VmQemu vm) throws LoginException, JSONException, IOException {
-		Map<String, String> params = vm.getCre
-		JSONObject jsonObject =
-
-
+	public String createQemu(String node, VmQemu vm) throws LoginException, JSONException, IOException, VmQemu.DeviceException {
+		JSONObject jsonObject = pve_action("/nodes/" + node + "/qemu", RestClient.RequestMethod.POST, vm.toMap());
+		return jsonObject.getString("data");
 	}
 	// TODO: QemuUpdate(String node, int vmid, params) PUT
 

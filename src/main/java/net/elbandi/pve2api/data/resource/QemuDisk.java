@@ -87,7 +87,7 @@ public class QemuDisk extends BlockDevice {
 		}
 	}
 	public static String parseUrl(String blockDeviceData){
-		String urlPattern = ":([a-z0-9_\\\\-/.]+),";
+		String urlPattern = ":([a-z0-9_\\-/.]+),";
 		Pattern r = Pattern.compile(urlPattern);
 		Matcher m = r.matcher(blockDeviceData);
 		if(m.find()){

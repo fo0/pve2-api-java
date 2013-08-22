@@ -29,6 +29,15 @@ public class Adapter {
 	/* NIC max. rate in Mbytes per second */
 	public float rate;
 
+	public String getCreateString(){
+		StringBuffer buffer = new StringBuffer();
+		if(model != null) buffer.append(model + "=");
+		if (mac != null) buffer.append(mac);
+		if (bridge != null) buffer.append(",bridge=" + bridge);
+		if (rate > 0) buffer.append(",rate=" + rate);
+		if (tag > 0) buffer.append(",tag=" + tag);
+		return buffer.toString();
+	}
 	public static String parseModel(String networkDeviceString){
 		String storagePattern = "^[a-z0-9_\\-.]+";
 		Pattern r = Pattern.compile(storagePattern);
