@@ -279,12 +279,12 @@ public class Pve2Api {
 		return new VmQemu(jObj.getJSONObject("data"));
 	}
 
-	public void getQemuConfig(String node, int vmid, VmQemu vm) throws JSONException,
+	/*public void getQemuConfig(String node, int vmid, VmQemu vm) throws JSONException,
 			LoginException, IOException {
 		JSONObject jObj = pve_action("/nodes/" + node + "/qemu/" + vmid + "/config",
 				RestClient.RequestMethod.GET, null);
 		vm.SetConfig(jObj.getJSONObject("data"));
-	}
+	}*/
 
 	public String startQemu(String node, int vmid) throws LoginException, JSONException,
 			IOException {
@@ -332,6 +332,12 @@ public class Pve2Api {
 	}
 
 	// TODO: QemuCreate(String node, int vmid, params)
+	public String createQemu(String node, VmQemu vm) throws LoginException, JSONException, IOException {
+		Map<String, String> params = vm.getCre
+		JSONObject jsonObject =
+
+
+	}
 	// TODO: QemuUpdate(String node, int vmid, params) PUT
 
 	protected String deleteQemu(String node, int vmid) throws LoginException, JSONException,
