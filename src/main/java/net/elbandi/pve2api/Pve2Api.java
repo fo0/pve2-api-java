@@ -337,8 +337,9 @@ public class Pve2Api {
 	}
 
 	// TODO: QemuCreate(String node, int vmid, params)
-	public String createQemu(String node, VmQemu vm) throws LoginException, JSONException, IOException, VmQemu.DeviceException {
-		JSONObject jsonObject = pve_action("/nodes/" + node + "/qemu", RestClient.RequestMethod.POST, vm.toMap());
+	public String createQemu(VmQemu vm) throws LoginException, JSONException, IOException, VmQemu.DeviceException, VmQemu.MissingFieldException {
+		Map<String, String> params = vm.toMap(); //adding this to make it throw MissingFieldException in case node is not specified
+		JSONObject jsonObject = pve_action("/nodes/" + vm.getNode().getNode() + "/qemu", RestClient.RequestMethod.POST, vm.toMap());
 		return jsonObject.getString("data");
 	}
 	// TODO: QemuUpdate(String node, int vmid, params) PUT
