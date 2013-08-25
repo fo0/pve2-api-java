@@ -462,7 +462,12 @@ public class Pve2Api {
 				RestClient.RequestMethod.POST, new PveParams("command", command));
 		return jObj.getString("data");
 	}
-
+	public String rollbackQemu(String node, int vmid, String snapname) throws LoginException,
+	            JSONException, IOException {
+		        JSONObject jObj = pve_action("/nodes/" + node + "/qemu/" + vmid + "/snapshot/" + snapname + "/rollback",
+				                RestClient.RequestMethod.POST, null);
+		        return jObj.getString("data");
+	}
 	public List<VmOpenvz> getOpenvzCTs(String node) throws JSONException, LoginException,
 			IOException {
 		List<VmOpenvz> res = new ArrayList<VmOpenvz>();
