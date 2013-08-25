@@ -53,7 +53,7 @@ public class Adapter {
 		Pattern r = Pattern.compile(storagePattern);
 		Matcher m = r.matcher(networkDeviceString);
 		if(m.find()){
-			return m.group(0);
+			return m.group(1);
 		} else {
 			return null;
 		}

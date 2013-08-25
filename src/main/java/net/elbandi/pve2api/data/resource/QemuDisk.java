@@ -14,8 +14,8 @@ import java.util.regex.Pattern;
  */
 public class QemuDisk extends BlockDevice {
 	/* throttle access speed */
-	int mbps_rd;
-	int mbps_wr;
+	double mbps_rd;
+	double mbps_wr;
 	int iops_rd;
 	int iops_wr;
 
@@ -24,19 +24,19 @@ public class QemuDisk extends BlockDevice {
 		this.device = device;
 	}
 
-	public int getMbps_rd() {
+	public double getMbps_rd() {
 		return mbps_rd;
 	}
 
-	public void setMbps_rd(int mbps_rd) {
+	public void setMbps_rd(double mbps_rd) {
 		this.mbps_rd = mbps_rd;
 	}
 
-	public int getMbps_wr() {
+	public double getMbps_wr() {
 		return mbps_wr;
 	}
 
-	public void setMbps_wr(int mbps_wr) {
+	public void setMbps_wr(double mbps_wr) {
 		this.mbps_wr = mbps_wr;
 	}
 
@@ -76,81 +76,50 @@ public class QemuDisk extends BlockDevice {
 		return string;
 
 	}
-	public static String parseStorage(String blockDeviceData){
-		String storagePattern = "^[a-z0-9_\\-.]+";
-		Pattern r = Pattern.compile(storagePattern);
-		Matcher m = r.matcher(blockDeviceData);
-		if(m.find()){
-			return m.group(0);
-		} else {
-			return null;
-		}
-	}
-	public static String parseUrl(String blockDeviceData){
-		String urlPattern = ":([a-z0-9_\\-/.]+),";
-		Pattern r = Pattern.compile(urlPattern);
-		Matcher m = r.matcher(blockDeviceData);
-		if(m.find()){
-			return m.group(1);
-		} else {
-			return null;
-		}
 
-	}
-	public static String parseIops_rd(String blockDeviceData){
+	public static int parseIops_rd(String blockDeviceData){
 		String iopsPattern = "iops_rd=([0-9]+)";
 		Pattern r = Pattern.compile(iopsPattern);
 		Matcher m = r.matcher(blockDeviceData);
+		int result= 0;
 		if(m.find()){
-			return m.group(1);
-		} else {
-			return null;
+			result = Integer.parseInt(m.group(1));
 		}
+		return result;
 
 	}
-	public static String parseIops_wr(String blockDeviceData){
+	public static int parseIops_wr(String blockDeviceData){
 		String iopsPattern = "iops_wr=([0-9]+)";
 		Pattern r = Pattern.compile(iopsPattern);
 		Matcher m = r.matcher(blockDeviceData);
+		int result = 0;
 		if(m.find()){
-			return m.group(1);
-		} else {
-			return null;
+			result = Integer.parseInt(m.group(1));
 		}
-
+		return result;
 	}
-	public static String parseMbps_rd(String blockDeviceData){
+	public static double parseMbps_rd(String blockDeviceData){
 		String mbpsPattern = "mbps_rd=([0-9.]+)";
 		Pattern r = Pattern.compile(mbpsPattern);
 		Matcher m = r.matcher(blockDeviceData);
+		double result = 0;
 		if(m.find()){
-			return m.group(1);
-		} else {
-			return null;
+			result =  Double.parseDouble(m.group(1));
 		}
+		return result;
 
 	}
-	public static String parseMbps_wr(String blockDeviceData){
+	public static double parseMbps_wr(String blockDeviceData){
 		String mbpsPattern = "mbps_wr=([0-9.]+)";
 		Pattern r = Pattern.compile(mbpsPattern);
 		Matcher m = r.matcher(blockDeviceData);
+		double result = 0;
 		if(m.find()){
-			return m.group(1);
-		} else {
-			return null;
+			result = Double.parseDouble(m.group(1));
 		}
+		return result;
 
 	}
-	public static String parseSize(String blockDeviceData){
-		String sizePattern = "size=([0-9.BMGT]+)";
-		Pattern r = Pattern.compile(sizePattern);
-		Matcher m = r.matcher(blockDeviceData);
-		if(m.find()){
-			return m.group(1);
-		} else {
-			return null;
-		}
 
-	}
 
 }

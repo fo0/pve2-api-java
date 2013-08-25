@@ -10,6 +10,10 @@ import net.elbandi.pve2api.data.BlockDevice;
  * To change this template use File | Settings | File Templates.
  */
 public class Cdrom extends BlockDevice {
+	public Cdrom(String bus, int device){
+		this.bus = bus;
+		this.device = device;
+	}
 	@Override
 	public String toString(){
 		return this.storage + ":" + this.url + ",media=cdrom,size=" + readableFileSize(this.size);

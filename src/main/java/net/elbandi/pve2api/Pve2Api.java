@@ -132,7 +132,11 @@ public class Pve2Api {
 		}
 		return res;
 	}
-
+	/* Returns next free ID */
+	public Integer nextId() throws JSONException, LoginException, IOException {
+		JSONObject jsonObject = pve_action("/cluster/nextid", RestClient.RequestMethod.GET, null);
+		return jsonObject.getInt("data");
+	}
 	public List<Task> getTasks() throws JSONException, LoginException, IOException {
 		List<Task> res = new ArrayList<Task>();
 		JSONObject jObj = pve_action("/cluster/tasks", RestClient.RequestMethod.GET, null);
@@ -275,7 +279,7 @@ public class Pve2Api {
 
 	public VmQemu getQemuVM(String node, int vmid) throws JSONException, LoginException,
 			IOException {
-		JSONObject jObj = pve_action("/nodes/" + node + "/qemu/" + vmid + "/status/current",
+		JSONObject jObj = pve_action("/nodes/" + node + "/qemu/" + vmid + "/config",
 				RestClient.RequestMethod.GET, null);
 		return new VmQemu(jObj.getJSONObject("data"));
 	}

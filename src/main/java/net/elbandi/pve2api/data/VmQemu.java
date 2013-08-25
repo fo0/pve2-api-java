@@ -3,9 +3,11 @@ package net.elbandi.pve2api.data;
 import java.util.HashMap;
 import java.util.Map;
 
+import net.elbandi.pve2api.Pve2Api;
 import net.elbandi.pve2api.data.resource.Adapter;
 import net.elbandi.pve2api.data.resource.Cdrom;
 import net.elbandi.pve2api.data.resource.QemuDisk;
+import net.elbandi.pve2api.data.resource.Node;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -14,6 +16,7 @@ public class VmQemu {
 
 	private String name;
 	private Status vmStatus;
+	private net.elbandi.pve2api.data.resource.Node node;
 	/* enable/disable acpi */
 	private boolean acpi;
 	/* boot order [acdn]{1,4} */
@@ -41,10 +44,7 @@ public class VmQemu {
 
 	private Map<String, Adapter> adapterMap = new HashMap<String, Adapter>();
 
-	public VmQemu(int vmid, String name){
-		this.vmid = vmid;
-		this.name = name;
-	}
+
 
 	public void addBlockDevice(BlockDevice device){
 		blockDeviceMap.put(device.getBus() + device.getDevice(), device);
@@ -61,8 +61,12 @@ public class VmQemu {
 	}
 
 
-	public Map<String, String> toMap() throws DeviceException{
+	public Map<String, String> toMap() throws DeviceException, MissingFieldException{
 		Map<String, String> map = new HashMap<String, String>();
+		if(vmid == 0) throw new MissingFieldException("Field 'vmid' is missing");
+		map.put("vmid", Integer.toString(vmid));
+		if(node == null) throw new MissingFieldException("Field 'node' is missing");
+		map.put("node", node.getNode());
 		map.put("name", name);
 		map.put("acpi", Boolean.toString(acpi));
 		map.put("boot", boot);
@@ -94,32 +98,54 @@ public class VmQemu {
 		}
 		return  map;
 	}
+	public VmQemu(int vmid){
+		this.vmid = vmid;
+	}
+	public VmQemu(int vmid, String name){
+		this.vmid = vmid;
+		this.name = name;
+	}
 	public VmQemu(JSONObject data) throws JSONException {
+		name = data.getString("name");
 		acpi = data.optInt("acpi", 1) == 1;
+		cpu = data.getString("cpu");
 		cores = data.getInt("cores");
 		cpuunits = data.optInt("cpuunits", 1000);
-		desc = data.getString("description");
+		desc = data.optString("description");
 		bootdisk = data.optString("bootdisk");
 		boot = data.optString("boot");
 		digest = data.getString("digest");
 		freeze = data.optInt("freeze", 0) == 1;
 		kvm = data.optInt("kvm", 1) == 1;
 		memory = data.getInt("memory");
-		onboot = data.getInt("onboot") == 1;
-		sockets = data.getInt("sockets");
+		onboot = data.optInt("onboot") == 1;
+		sockets = data.optInt("sockets", 1);
 		ostype = data.getString("ostype");
 		for (String k : JSONObject.getNames(data)) {
 			if (k.startsWith("ide") ||k.startsWith("scsi") || k.startsWith("virtio")){
+
 				String blockDeviceString = data.optString(k);
-				QemuDisk qemuDisk = new QemuDisk("ide", Integer.parseInt(k.substring(3)));
-				qemuDisk.setStorage(QemuDisk.parseStorage(blockDeviceString));
-				qemuDisk.setSize(Long.parseLong(QemuDisk.parseSize(blockDeviceString)));
-				qemuDisk.setUrl(QemuDisk.parseUrl(blockDeviceString));
-				qemuDisk.setIops_rd(Integer.parseInt(QemuDisk.parseIops_rd(blockDeviceString)));
-				qemuDisk.setIops_wr(Integer.parseInt(QemuDisk.parseIops_wr(blockDeviceString)));
-				qemuDisk.setMbps_rd(Integer.parseInt(QemuDisk.parseMbps_rd(blockDeviceString)));
-				qemuDisk.setMbps_wr(Integer.parseInt(QemuDisk.parseIops_wr(blockDeviceString)));
-				blockDeviceMap.put(qemuDisk.getBus() + qemuDisk.getDevice(), qemuDisk);
+				if(BlockDevice.parseMedia(blockDeviceString) != null && BlockDevice.parseMedia(blockDeviceString).equals("cdrom")){
+					Cdrom cdrom = new Cdrom(k.replaceAll("[0-9]+", ""), Integer.parseInt(k.substring(k.length() - 1)));
+					cdrom.setMedia(BlockDevice.parseMedia(blockDeviceString));
+					cdrom.setSize(BlockDevice.parseSize(blockDeviceString));
+				 	cdrom.setStorage(BlockDevice.parseStorage(blockDeviceString));
+					cdrom.setUrl(BlockDevice.parseUrl(blockDeviceString));
+					blockDeviceMap.put(cdrom.getBus() + cdrom.getDevice(), cdrom);
+				} else {
+					QemuDisk qemuDisk = new QemuDisk(k.replaceAll("[0-9]+", ""), Integer.parseInt(k.substring(k.length() - 1)));
+					qemuDisk.setStorage(QemuDisk.parseStorage(blockDeviceString));
+					qemuDisk.setSize(QemuDisk.parseSize(blockDeviceString));
+					qemuDisk.setUrl(QemuDisk.parseUrl(blockDeviceString));
+					qemuDisk.setIops_rd(QemuDisk.parseIops_rd(blockDeviceString));
+					qemuDisk.setIops_wr(QemuDisk.parseIops_wr(blockDeviceString));
+					qemuDisk.setMbps_rd(QemuDisk.parseMbps_rd(blockDeviceString));
+					qemuDisk.setMbps_wr(QemuDisk.parseMbps_wr(blockDeviceString));
+					qemuDisk.setMedia(BlockDevice.parseMedia(blockDeviceString));
+					///System.out.println("Putting " + qemuDisk.getBus() + qemuDisk.getDevice());
+					blockDeviceMap.put(qemuDisk.getBus() + qemuDisk.getDevice(), qemuDisk);
+				}
+
 			}else if (k.startsWith("net")){
 				String netDeviceString = data.getString(k);
 				Adapter adapter = new Adapter("net", Integer.parseInt(k.substring(3)));
@@ -171,6 +197,14 @@ public class VmQemu {
 		public DeviceException(String message) { super(message); }
 		public DeviceException(String message, Throwable cause) { super(message, cause); }
 		public DeviceException(Throwable cause) { super(cause); }
+	}
+	public class MissingFieldException extends Exception{
+		public MissingFieldException(){
+			super();
+		}
+		public MissingFieldException(String message) { super(message);}
+		public MissingFieldException(String message, Throwable cause){ super(message, cause);}
+		public MissingFieldException(Throwable cause){ super(cause);}
 	}
 	class Status {
 		/* cpu - current cpu usage, %. 1 - 100 usage	 */
@@ -344,4 +378,19 @@ public class VmQemu {
 		return adapterMap;
 	}
 
+	public String getCpu() {
+		return cpu;
+	}
+
+	public Node getNode() {
+		return node;
+	}
+
+	public void setNode(Node node) {
+		this.node = node;
+	}
+
+	public void setCpu(String cpu) {
+		this.cpu = cpu;
+	}
 }
