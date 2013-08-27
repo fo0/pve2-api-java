@@ -105,6 +105,7 @@ public class Pve2Api {
 			throw new LoginException(client.getErrorMessage());
 		} else if (client.getResponseCode() == HttpURLConnection.HTTP_BAD_REQUEST) {
 			// TODO: find a better exception
+			System.out.println("Response:" + client.getResponse());
 			throw new IOException(client.getErrorMessage());
 		} else {
 			throw new IOException(client.getErrorMessage());
@@ -151,14 +152,15 @@ public class Pve2Api {
 	// TODO: setOptions
 	// TODO: getClusterStatus
 
-	public List<String> getNodeList() throws JSONException, LoginException, IOException {
-		List<String> res = new ArrayList<String>();
+	public List<net.elbandi.pve2api.data.resource.Node> getNodeList() throws JSONException, LoginException, IOException {
+		List<net.elbandi.pve2api.data.resource.Node> res = new ArrayList<net.elbandi.pve2api.data.resource.Node>();
 		JSONObject jObj = pve_action("/nodes", RestClient.RequestMethod.GET, null);
 		JSONArray data2;
 		data2 = jObj.getJSONArray("data");
 		for (int i = 0; i < data2.length(); i++) {
-			JSONObject row = data2.getJSONObject(i);
-			res.add(row.getString("node"));
+			res.add(new net.elbandi.pve2api.data.resource.Node(data2.getJSONObject(i)));
+			/*JSONObject row = data2.getJSONObject(i);
+			res.add(row.getString("node"));*/
 		}
 		return res;
 	}
@@ -338,7 +340,7 @@ public class Pve2Api {
 
 	// TODO: QemuCreate(String node, int vmid, params)
 	public String createQemu(VmQemu vm) throws LoginException, JSONException, IOException, VmQemu.DeviceException, VmQemu.MissingFieldException {
-		Map<String, String> params = vm.toMap(); //adding this to make it throw MissingFieldException in case node is not specified
+		Map<String, String> params = vm.toMap(); //adding this to make it throw MissingFieldException right now in case node is not specified
 		JSONObject jsonObject = pve_action("/nodes/" + vm.getNode().getNode() + "/qemu", RestClient.RequestMethod.POST, vm.toMap());
 		return jsonObject.getString("data");
 	}

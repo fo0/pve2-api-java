@@ -56,11 +56,13 @@ public class Resource {
 			return Type.Node;
 		else if (name.equals("storage"))
 			return Type.Storage;
+		else if(name.equals("volume"))
+			return Type.Volume;
 		else
 			return Type.Unknown;
 	}
 
 	enum Type {
-		Pool, VmQemu, Node, Storage, Unknown,
+		Pool, VmQemu, Node, Storage, Unknown, Volume
 	}
 }

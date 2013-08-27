@@ -31,8 +31,8 @@ public class Adapter {
 
 	public String getCreateString(){
 		StringBuffer buffer = new StringBuffer();
-		if(model != null) buffer.append(model + "=");
-		if (mac != null) buffer.append(mac);
+		if(model != null) buffer.append(model);
+		if (mac != null) buffer.append("=" + mac);
 		if (bridge != null) buffer.append(",bridge=" + bridge);
 		if (rate > 0) buffer.append(",rate=" + rate);
 		if (tag > 0) buffer.append(",tag=" + tag);

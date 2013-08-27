@@ -68,11 +68,8 @@ public class QemuDisk extends BlockDevice {
 		return string;
 	}
 	public String getCreateString(){
-		String string = this.storage + ":" + size / (1024l * 1024l * 1024l);
-		if(mbps_rd > 0) string += ",mbps_rd=" + mbps_rd;
-		if (mbps_wr > 0) string += ",mbps_wr=" + mbps_wr;
-		if (iops_rd > 0) string += ",iops_rd=" + iops_rd;
-		if (iops_wr > 0) string += ",iops_wr=" + iops_wr;
+		String string = "volume=/var/lib/vz,";
+		/*String string = "media=disk,format=qcow2,size=" + size;*/
 		return string;
 
 	}

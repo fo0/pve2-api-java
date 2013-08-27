@@ -14,7 +14,6 @@ public class Node extends Resource {
 	private long mem;
 	private long disk;
 	private float cpu;
-
 	public Node(JSONObject data) throws JSONException {
 		super(data);
 		node = data.getString("node");

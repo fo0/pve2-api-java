@@ -3,11 +3,19 @@ package net.elbandi.pve2api;
 import static org.junit.Assert.*;
 
 import net.elbandi.pve2api.data.VmQemu;
+import net.elbandi.pve2api.data.resource.Adapter;
 import net.elbandi.pve2api.data.resource.Cdrom;
 import net.elbandi.pve2api.data.resource.QemuDisk;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.Test;
+
+import javax.security.auth.login.LoginException;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Properties;
 
 /**
  * Created with IntelliJ IDEA.
@@ -19,7 +27,7 @@ import org.junit.Test;
 
 
 public class QemuTest {
-	Pve2Api pve2Api = new Pve2Api("nod2.netdedicated.ru", "root", "pam", "x3reunion");
+	Pve2Api pve2Api = new Pve2Api(getConfig().getProperty("host"), getConfig().getProperty("username"), "pam", getConfig().getProperty("password"));
 	@Test
 	public void simpleTest(){
 		VmQemu vm = new VmQemu(100, "test");
@@ -99,6 +107,56 @@ public class QemuTest {
 	}
 	@Test
 	public void testCreateQemuVm() {
+		//creating a disk image, QemuDisk
+		QemuDisk qemuDisk = new QemuDisk("ide", 0);
+		qemuDisk.setSize(1024l * 1024l * 1024l);
+		qemuDisk.setStorage("local");
+		qemuDisk.setMbps_rd(10d);
+		//creating a new interface, Adapter
+		Adapter adapter = new Adapter("net", 0);
+		adapter.setModel("e1000");
+		VmQemu vmQemu = null;
+		try {
+			vmQemu = new VmQemu(pve2Api.nextId(), "pve2test");
+			vmQemu.setName("pve2test");
+			vmQemu.setCpu("host");
+			vmQemu.setOstype("l26");
+			/*vmQemu.setBootdisk("ide0");*/
+			vmQemu.setMemory(1024);
+			vmQemu.setCores(1);
+			vmQemu.setOnboot(true);
+			vmQemu.setSockets(1);
+			/*vmQemu.addBlockDevice(qemuDisk);*/
+			vmQemu.addAdapter(adapter);
+			vmQemu.setNode(pve2Api.getNodeList().get(0));
+		}catch (LoginException loginE){
+			fail(loginE.getMessage());
+		}catch (JSONException jsonE){
+			fail(jsonE.getMessage());
+		}catch (IOException ioException){
+			fail(ioException.getMessage());
+		}
+		try {
+			Map<String, String> map = vmQemu.toMap();
+			for(String key : map.keySet()){
+				System.out.println("Key: " + key + " Value: " + map.get(key));
+			}
+			pve2Api.createQemu(vmQemu);
+		} catch (VmQemu.MissingFieldException missingFieldEx){
+			fail(missingFieldEx.getMessage());
+		} catch (VmQemu.DeviceException deviceException){
+			fail(deviceException.getMessage());
+		} catch (Exception e){
+			e.printStackTrace();
+			fail(e.getMessage());
+		}
 
+	}
+	public Properties getConfig(){
+		Properties props = new Properties();
+		try {
+			props.load(new FileReader(new File("/home/artemz/Documents/pve2.properties")));
+		}catch (Exception e){}
+		return props;
 	}
 }

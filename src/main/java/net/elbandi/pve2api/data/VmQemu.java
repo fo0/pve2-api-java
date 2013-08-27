@@ -20,7 +20,7 @@ public class VmQemu {
 	/* enable/disable acpi */
 	private boolean acpi;
 	/* boot order [acdn]{1,4} */
-	private String boot;
+	private String boot = "cdn";
 	/* e.g ide0 */
 	private String bootdisk;
 	private int cores;
@@ -65,21 +65,23 @@ public class VmQemu {
 		Map<String, String> map = new HashMap<String, String>();
 		if(vmid == 0) throw new MissingFieldException("Field 'vmid' is missing");
 		map.put("vmid", Integer.toString(vmid));
-		if(node == null) throw new MissingFieldException("Field 'node' is missing");
-		map.put("node", node.getNode());
+		/*if(node == null) throw new MissingFieldException("Field 'node' is missing");
+		map.put("node", node.getNode());*/
 		map.put("name", name);
-		map.put("acpi", Boolean.toString(acpi));
+		/*map.put("acpi", Boolean.toString(acpi));*/
 		map.put("boot", boot);
-		map.put("bootdisk", bootdisk);
+		if(bootdisk != null) map.put("bootdisk", bootdisk);
 		if(cores > 0) map.put("cores", Integer.toString(cores));
 		if(cpu != null) map.put("cpu", cpu);
 		if (cpuunits > 0) map.put("cpuunits", Integer.toString(cpuunits));
 		if(desc != null) map.put("description", desc);
 		if(digest != null) map.put("digest", digest);
-		map.put("freeze", Boolean.toString(freeze));
+		if(freeze){ map.put("freeze",  "1"); } else { map.put("freeze",  "0"); }
+
 		if(memory > 0) map.put("memory", Integer.toString(memory));
-		map.put("kvm", Boolean.toString(kvm));
-		map.put("onboot", Boolean.toString(onboot));
+		/*map.put("kvm", Boolean.toString(kvm));*/
+		if(onboot) { map.put("onboot", "1"); } else { map.put("onboot", "0"); }
+		/*map.put("onboot", Boolean.toString(onboot));*/
 		if(ostype != null) map.put("ostype", ostype);
 
 		for(String device : blockDeviceMap.keySet()){
@@ -373,7 +375,6 @@ public class VmQemu {
 	public Map<String, BlockDevice> getBlockDeviceMap() {
 		return blockDeviceMap;
 	}
-
 	public Map<String, Adapter> getAdapterMap() {
 		return adapterMap;
 	}
@@ -388,6 +389,62 @@ public class VmQemu {
 
 	public void setNode(Node node) {
 		this.node = node;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public void setAcpi(boolean acpi) {
+		this.acpi = acpi;
+	}
+
+	public void setBoot(String boot) {
+		this.boot = boot;
+	}
+
+	public void setBootdisk(String bootdisk) {
+		this.bootdisk = bootdisk;
+	}
+
+	public void setCores(int cores) {
+		this.cores = cores;
+	}
+
+	public void setCpuunits(int cpuunits) {
+		this.cpuunits = cpuunits;
+	}
+
+	public void setDesc(String desc) {
+		this.desc = desc;
+	}
+
+	public void setDigest(String digest) {
+		this.digest = digest;
+	}
+
+	public void setFreeze(boolean freeze) {
+		this.freeze = freeze;
+	}
+
+	public void setKvm(boolean kvm) {
+		this.kvm = kvm;
+	}
+
+	public void setMemory(int memory) {
+		this.memory = memory;
+	}
+
+	public void setOnboot(boolean onboot) {
+		this.onboot = onboot;
+	}
+
+	public void setOstype(String ostype) {
+		this.ostype = ostype;
+	}
+
+	public void setSockets(int sockets) {
+		this.sockets = sockets;
 	}
 
 	public void setCpu(String cpu) {
