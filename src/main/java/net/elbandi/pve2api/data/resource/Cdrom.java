@@ -14,9 +14,9 @@ public class Cdrom extends BlockDevice {
 		this.bus = bus;
 		this.device = device;
 	}
-	@Override
+	/*@Override
 	public String toString(){
 		return this.storage + ":" + this.url + ",media=cdrom,size=" + readableFileSize(this.size);
 
-	}
+	}*/
 }

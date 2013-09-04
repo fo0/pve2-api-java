@@ -13,15 +13,11 @@ import java.util.regex.Pattern;
  */
 public abstract class BlockDevice {
 	public String storage;
-	/*  e.g 111/vm-111-disk-2.qcow2 */
-	public  String url;
-	/* size, in bytes */
-	public long size;
 	/* media type, disk or cdrom */
 	public String media;
 	/* system interface. virtio, unused, scsi, sata or ide */
 	public String bus;
-
+	public Volume volume;
 	public int getDevice() {
 		return device;
 	}
@@ -30,24 +26,16 @@ public abstract class BlockDevice {
 		this.device = device;
 	}
 
-	public String getUrl() {
-		return url;
-	}
-
-	public void setUrl(String url) {
-		this.url = url;
-	}
-
-	public long getSize() {
-		return size;
-	}
-
-	public void setSize(long size) {
-		this.size = size;
-	}
-
 	public String getBus() {
 		return bus;
+	}
+
+	public Volume getVolume() {
+		return volume;
+	}
+
+	public void setVolume(Volume volume) {
+		this.volume = volume;
 	}
 
 	public void setBus(String bus) {

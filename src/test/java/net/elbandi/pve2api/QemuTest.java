@@ -3,6 +3,7 @@ package net.elbandi.pve2api;
 import static org.junit.Assert.*;
 
 import net.elbandi.pve2api.data.VmQemu;
+import net.elbandi.pve2api.data.Volume;
 import net.elbandi.pve2api.data.resource.Adapter;
 import net.elbandi.pve2api.data.resource.Cdrom;
 import net.elbandi.pve2api.data.resource.QemuDisk;
@@ -77,11 +78,9 @@ public class QemuTest {
 		//testing block device parsing
 		assertNotNull(vm.getBlockDeviceMap().get("virtio1"));
 		assertEquals(vm.getBlockDeviceMap().get("virtio1").getStorage(), "local");
-		assertEquals(vm.getBlockDeviceMap().get("virtio1").getUrl(), "111/vm-111-disk-2.qcow2");
 		assertEquals(((QemuDisk)vm.getBlockDeviceMap().get("virtio1")).getIops_rd(), 10);
 		assertEquals(((QemuDisk)vm.getBlockDeviceMap().get("virtio1")).getIops_wr(), 10);
 		assertEquals(((QemuDisk)vm.getBlockDeviceMap().get("virtio1")).getMbps_wr(), 1.1, 0.01d);
-		assertEquals(((QemuDisk)vm.getBlockDeviceMap().get("virtio1")).getSize(), 1l*1024l*1024l*1024l);
 		//testing cdrom
 		assertEquals(vm.getBlockDeviceMap().get("ide1").getMedia(), "cdrom");
 		assert vm.getBlockDeviceMap().get("ide1") instanceof Cdrom;
@@ -95,7 +94,7 @@ public class QemuTest {
 		}catch (Exception e){
 			fail(e.getMessage());
 		}
-		System.out.println(vmQemu.getName());
+		//System.out.println(vmQemu.getName());
 	}
 	@Test
 	public void testNextId(){
@@ -105,8 +104,39 @@ public class QemuTest {
 			fail(e.getMessage());
 		}
 	}
-	@Test
+	/*@Test
+	public void testAssignDisk() {
+		Volume testVolume = null;
+		try {
+			testVolume = pve2Api.getVolumeById("nod2", "local", "local:111/testvolume.qcow2");
+		} catch (Exception e){
+			e.printStackTrace();
+			fail(e.getMessage());
+		}
+		QemuDisk qemuDisk = new QemuDisk("sata", 0);
+		qemuDisk.setStorage("local");
+		qemuDisk.setMbps_rd(10.1);
+		qemuDisk.setVolume(testVolume);
+		try {
+			pve2Api.assignDiskToQemu(111, "nod2", qemuDisk);
+		}catch (Exception e){
+			fail(e.getMessage());
+		}
+	}*/
+	/*@Test
+	public void testCreateVolume(){
+		try {
+			pve2Api.createVolume("nod2", "local", "testvolume.qcow2", "10G", 111, "qcow2");
+		}catch (Exception e){
+			fail(e.getMessage());
+		}
+
+	}*/
+	/*@Test
 	public void testCreateQemuVm() {
+		//creating a disk volume
+		Volume volume = new Volume("qcow2")
+
 		//creating a disk image, QemuDisk
 		QemuDisk qemuDisk = new QemuDisk("ide", 0);
 		qemuDisk.setSize(1024l * 1024l * 1024l);
@@ -121,12 +151,12 @@ public class QemuTest {
 			vmQemu.setName("pve2test");
 			vmQemu.setCpu("host");
 			vmQemu.setOstype("l26");
-			/*vmQemu.setBootdisk("ide0");*/
+			*//*vmQemu.setBootdisk("ide0");*//*
 			vmQemu.setMemory(1024);
 			vmQemu.setCores(1);
 			vmQemu.setOnboot(true);
 			vmQemu.setSockets(1);
-			/*vmQemu.addBlockDevice(qemuDisk);*/
+			*//*vmQemu.addBlockDevice(qemuDisk);*//*
 			vmQemu.addAdapter(adapter);
 			vmQemu.setNode(pve2Api.getNodeList().get(0));
 		}catch (LoginException loginE){
@@ -151,7 +181,7 @@ public class QemuTest {
 			fail(e.getMessage());
 		}
 
-	}
+	}*/
 	public Properties getConfig(){
 		Properties props = new Properties();
 		try {

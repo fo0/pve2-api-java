@@ -10,19 +10,9 @@ import java.util.Map;
 
 import javax.security.auth.login.LoginException;
 
-import net.elbandi.pve2api.data.AplInfo;
-import net.elbandi.pve2api.data.ClusterLog;
-import net.elbandi.pve2api.data.Network;
-import net.elbandi.pve2api.data.Node;
-import net.elbandi.pve2api.data.Resource;
-import net.elbandi.pve2api.data.Service;
-import net.elbandi.pve2api.data.Storage;
-import net.elbandi.pve2api.data.Task;
-import net.elbandi.pve2api.data.VmOpenvz;
-import net.elbandi.pve2api.data.VmQemu;
+import net.elbandi.pve2api.data.*;
 
-import net.elbandi.pve2api.data.VncData;
-
+import net.elbandi.pve2api.data.resource.QemuDisk;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -37,6 +27,8 @@ public class Pve2Api {
 	private String pve_login_token;
 	private Date pve_login_ticket_timestamp;
 
+	private static Pve2Api pve2ApiHolder = null;
+
 	public Pve2Api(String pve_hostname, String pve_username, String pve_realm, String pve_password) {
 		this.pve_hostname = pve_hostname;
 		this.pve_username = pve_username;
@@ -44,6 +36,8 @@ public class Pve2Api {
 		this.pve_realm = pve_realm;
 
 		pve_login_ticket_timestamp = null;
+
+		pve2ApiHolder = this;
 	}
 
 	public void login() throws JSONException, LoginException, IOException {
@@ -254,7 +248,25 @@ public class Pve2Api {
 		}
 		return res;
 	}
-
+	public List<Volume> getVolumes(String node, String storage) throws JSONException, LoginException, IOException {
+		List<Volume> volumes = new ArrayList<Volume>();
+		JSONObject jsonObject = pve_action("/nodes/" + node + "/storage/" + storage + "/content", RestClient.RequestMethod.GET, null);
+		JSONArray jsonArray = jsonObject.getJSONArray("data");
+		for (int i = 0; i < jsonArray.length(); i++){
+			volumes.add(new Volume(jsonArray.getJSONObject(i)));
+		}
+		return volumes;
+	}
+	public Volume getVolumeById(String node, String storage, String id) throws JSONException, LoginException, IOException{
+		List<Volume> volumes = getVolumes(node, storage);
+		Volume volumeToReturn = null;
+		for (Volume volume : volumes){
+			if(volume.getVolid().equals(id)){
+				volumeToReturn = volume;
+			}
+		}
+		return volumeToReturn;
+	}
 	public void createStorage(Storage storage) throws LoginException, JSONException, IOException {
 		Map<String, String> data = storage.getCreateParams();
 		pve_action("/storage", RestClient.RequestMethod.POST, data);
@@ -268,7 +280,21 @@ public class Pve2Api {
 	public void deleteStorage(String storage) throws LoginException, JSONException, IOException {
 		pve_action("/storage/" + storage, RestClient.RequestMethod.DELETE, null);
 	}
-
+	public Volume createVolume(String node, String storage, String filename, String size, Integer vmid, String format) throws LoginException, JSONException, IOException, VmQemu.MissingFieldException {
+		Map<String, String> data = new HashMap<String, String>();
+		data.put("filename", filename);
+		data.put("size", size);
+		data.put("vmid", Integer.toString(vmid));
+		data.put("format", format);
+		JSONObject jsonObject = pve_action("/nodes/" + node + "/storage/" + storage + "/content", RestClient.RequestMethod.POST, data);
+		return getVolumeById(node, storage, jsonObject.getString("data"));
+	}
+	public void assignDiskToQemu(int vmid, String node, QemuDisk qemuDisk) throws JSONException, LoginException, IOException, VmQemu.MissingFieldException {
+		Map<String, String> data = new HashMap<String, String>();
+		data.put(qemuDisk.getBus() + Integer.toString(qemuDisk.getDevice()), qemuDisk.getCreateString());
+		JSONObject jsonObject = pve_action("/nodes/" + node + "/qemu/" + Integer.toString(vmid) + "/config", RestClient.RequestMethod.PUT, data);
+		System.out.println(jsonObject.toString());
+	}
 	public List<VmQemu> getQemuVMs(String node) throws JSONException, LoginException, IOException {
 		List<VmQemu> res = new ArrayList<VmQemu>();
 		JSONObject jObj = pve_action("/nodes/" + node + "/qemu", RestClient.RequestMethod.GET, null);
@@ -666,5 +692,9 @@ public class Pve2Api {
 			put(key, value ? "1" : "0");
 			return this;
 		}
+	}
+
+	public static Pve2Api getPve2Api() {
+		return pve2ApiHolder;
 	}
 }

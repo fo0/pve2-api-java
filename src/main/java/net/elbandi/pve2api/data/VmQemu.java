@@ -130,15 +130,18 @@ public class VmQemu {
 				if(BlockDevice.parseMedia(blockDeviceString) != null && BlockDevice.parseMedia(blockDeviceString).equals("cdrom")){
 					Cdrom cdrom = new Cdrom(k.replaceAll("[0-9]+", ""), Integer.parseInt(k.substring(k.length() - 1)));
 					cdrom.setMedia(BlockDevice.parseMedia(blockDeviceString));
-					cdrom.setSize(BlockDevice.parseSize(blockDeviceString));
+					/*cdrom.setSize(BlockDevice.parseSize(blockDeviceString));*/
 				 	cdrom.setStorage(BlockDevice.parseStorage(blockDeviceString));
-					cdrom.setUrl(BlockDevice.parseUrl(blockDeviceString));
+					/*cdrom.setUrl(BlockDevice.parseUrl(blockDeviceString));*/
+
+					/*Volume cdromVolume = new Volume("iso", "iso");
+					cdromVolume*/
 					blockDeviceMap.put(cdrom.getBus() + cdrom.getDevice(), cdrom);
 				} else {
 					QemuDisk qemuDisk = new QemuDisk(k.replaceAll("[0-9]+", ""), Integer.parseInt(k.substring(k.length() - 1)));
 					qemuDisk.setStorage(QemuDisk.parseStorage(blockDeviceString));
-					qemuDisk.setSize(QemuDisk.parseSize(blockDeviceString));
-					qemuDisk.setUrl(QemuDisk.parseUrl(blockDeviceString));
+					/*qemuDisk.setSize(QemuDisk.parseSize(blockDeviceString));
+					qemuDisk.setUrl(QemuDisk.parseUrl(blockDeviceString));*/
 					qemuDisk.setIops_rd(QemuDisk.parseIops_rd(blockDeviceString));
 					qemuDisk.setIops_wr(QemuDisk.parseIops_wr(blockDeviceString));
 					qemuDisk.setMbps_rd(QemuDisk.parseMbps_rd(blockDeviceString));
@@ -161,37 +164,7 @@ public class VmQemu {
 		}
 
 	}
-	/*
-	 * "boot" : "dnc", cdn c disk d, cdrom a, floppy n, network "bootdisk" :
-	 * "virtio0",
-	 */
-	/*public static String getOsType(String name) {
-		if (name.equals("wxp"))
-			return "Microsoft Windows XP/2003";
-		else if (name.equals("w2k"))
-			return "Microsoft Windows 2000";
-		else if (name.equals("w2k8"))
-			return "Microsoft Windows Vista/2008";
-		else if (name.equals("win7"))
-			return "Microsoft Windows 7/2008r2";
-		else if (name.equals("l24"))
-			return "Linux 2.4 Kernel";
-		else if (name.equals("l26"))
-			return "Linux 3.X/2.6 Kernel";
-		else
-			return "Other OS types";
-	}*/
-	//Now moved to Status nested class
-	/*public Map<String, String> getCreateConfig(){
-		Map<String, String> params = new HashMap<String, String>();
-		if(this.cpu > 0) params.put("cpu", Float.toString(this.cpu));
-		if (this.cpus > 0) params.put("cpus", Integer.toString(this.cpus));
-		if(this.disk > 0) params.put("disk", Float.toString(this.disk));
-		if(this.diskread > 0) params.put("diskread", Long.toString(this.diskread));
-		if(this.diskwrite > 0) params.put("diskwrite", Long.toString(this.diskwrite));
-		params.put("ha", Boolean.toString(this.ha));
-		if(this.maxdisk > 0) params.put("maxdisk", )
-	}*/
+
 	public class DeviceException extends Exception {
 		public DeviceException() {
 			super();
@@ -200,7 +173,7 @@ public class VmQemu {
 		public DeviceException(String message, Throwable cause) { super(message, cause); }
 		public DeviceException(Throwable cause) { super(cause); }
 	}
-	public class MissingFieldException extends Exception{
+	public static class MissingFieldException extends Exception{
 		public MissingFieldException(){
 			super();
 		}

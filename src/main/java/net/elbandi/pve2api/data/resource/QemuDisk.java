@@ -1,6 +1,8 @@
 package net.elbandi.pve2api.data.resource;
 
 import net.elbandi.pve2api.data.BlockDevice;
+import net.elbandi.pve2api.data.VmQemu;
+import net.elbandi.pve2api.data.Volume;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,7 +20,6 @@ public class QemuDisk extends BlockDevice {
 	double mbps_wr;
 	int iops_rd;
 	int iops_wr;
-
 	public QemuDisk(String bus, int device){
 		this.bus = bus;
 		this.device = device;
@@ -56,7 +57,7 @@ public class QemuDisk extends BlockDevice {
 		this.iops_wr = iops_wr;
 	}
 
-	@Override
+	/*@Override
 	public String toString(){
 		String string = this.storage + ":" + this.url;
 		if(mbps_rd > 0) string += ",mbps_rd=" + mbps_rd;
@@ -66,11 +67,18 @@ public class QemuDisk extends BlockDevice {
 		if (iops_wr > 0) string += ",iops_wr=" + iops_wr;
 		string += readableFileSize(this.size);
 		return string;
-	}
-	public String getCreateString(){
-		String string = "volume=/var/lib/vz,";
-		/*String string = "media=disk,format=qcow2,size=" + size;*/
-		return string;
+	}*/
+	public String getCreateString() throws VmQemu.MissingFieldException{
+		StringBuilder stringBuilder = new StringBuilder();
+		if(volume == null) throw new VmQemu.MissingFieldException("Field volume is not set");
+		stringBuilder.append("volume=" + volume.getVolid());
+		stringBuilder.append(",media=disk");
+		if(mbps_rd > 0) stringBuilder.append(",mbps_rd=" + mbps_rd);
+		if (mbps_wr > 0) stringBuilder.append(",mbps_wr=" + mbps_wr);
+		if (iops_rd > 0) stringBuilder.append(",iops_rd=" + iops_rd);
+		if (iops_wr > 0) stringBuilder.append(",iops_wr=" + iops_wr);
+		stringBuilder.append(",size=" + volume.getSize());
+		return stringBuilder.toString();
 
 	}
 
