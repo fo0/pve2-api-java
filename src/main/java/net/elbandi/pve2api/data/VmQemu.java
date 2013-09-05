@@ -1,5 +1,6 @@
 package net.elbandi.pve2api.data;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,6 +11,8 @@ import net.elbandi.pve2api.data.resource.QemuDisk;
 import net.elbandi.pve2api.data.resource.Node;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import javax.security.auth.login.LoginException;
 
 public class VmQemu {
 	private int vmid;
@@ -65,8 +68,6 @@ public class VmQemu {
 		Map<String, String> map = new HashMap<String, String>();
 		if(vmid == 0) throw new MissingFieldException("Field 'vmid' is missing");
 		map.put("vmid", Integer.toString(vmid));
-		/*if(node == null) throw new MissingFieldException("Field 'node' is missing");
-		map.put("node", node.getNode());*/
 		map.put("name", name);
 		/*map.put("acpi", Boolean.toString(acpi));*/
 		map.put("boot", boot);
@@ -107,7 +108,7 @@ public class VmQemu {
 		this.vmid = vmid;
 		this.name = name;
 	}
-	public VmQemu(JSONObject data) throws JSONException {
+	public VmQemu(String node, int vmid, JSONObject data) throws JSONException, LoginException, IOException {
 		name = data.getString("name");
 		acpi = data.optInt("acpi", 1) == 1;
 		cpu = data.getString("cpu");
@@ -123,31 +124,28 @@ public class VmQemu {
 		onboot = data.optInt("onboot") == 1;
 		sockets = data.optInt("sockets", 1);
 		ostype = data.getString("ostype");
+		this.vmid = vmid;
 		for (String k : JSONObject.getNames(data)) {
 			if (k.startsWith("ide") ||k.startsWith("scsi") || k.startsWith("virtio")){
-
 				String blockDeviceString = data.optString(k);
+				String storage = BlockDevice.parseStorage(blockDeviceString);
+				String url = BlockDevice.parseUrl(blockDeviceString);
 				if(BlockDevice.parseMedia(blockDeviceString) != null && BlockDevice.parseMedia(blockDeviceString).equals("cdrom")){
 					Cdrom cdrom = new Cdrom(k.replaceAll("[0-9]+", ""), Integer.parseInt(k.substring(k.length() - 1)));
 					cdrom.setMedia(BlockDevice.parseMedia(blockDeviceString));
-					/*cdrom.setSize(BlockDevice.parseSize(blockDeviceString));*/
-				 	cdrom.setStorage(BlockDevice.parseStorage(blockDeviceString));
-					/*cdrom.setUrl(BlockDevice.parseUrl(blockDeviceString));*/
-
-					/*Volume cdromVolume = new Volume("iso", "iso");
-					cdromVolume*/
+				 	cdrom.setStorage(storage);
+					cdrom.setVolume(Pve2Api.getPve2Api().getVolumeById(node, storage, storage + ":" + url));
 					blockDeviceMap.put(cdrom.getBus() + cdrom.getDevice(), cdrom);
 				} else {
 					QemuDisk qemuDisk = new QemuDisk(k.replaceAll("[0-9]+", ""), Integer.parseInt(k.substring(k.length() - 1)));
-					qemuDisk.setStorage(QemuDisk.parseStorage(blockDeviceString));
-					/*qemuDisk.setSize(QemuDisk.parseSize(blockDeviceString));
-					qemuDisk.setUrl(QemuDisk.parseUrl(blockDeviceString));*/
+					qemuDisk.setStorage(storage);
 					qemuDisk.setIops_rd(QemuDisk.parseIops_rd(blockDeviceString));
 					qemuDisk.setIops_wr(QemuDisk.parseIops_wr(blockDeviceString));
 					qemuDisk.setMbps_rd(QemuDisk.parseMbps_rd(blockDeviceString));
 					qemuDisk.setMbps_wr(QemuDisk.parseMbps_wr(blockDeviceString));
 					qemuDisk.setMedia(BlockDevice.parseMedia(blockDeviceString));
-					///System.out.println("Putting " + qemuDisk.getBus() + qemuDisk.getDevice());
+					qemuDisk.setVolume(Pve2Api.getPve2Api().getVolumeById(node, storage, storage + ":" + url));
+
 					blockDeviceMap.put(qemuDisk.getBus() + qemuDisk.getDevice(), qemuDisk);
 				}
 

@@ -300,7 +300,7 @@ public class Pve2Api {
 		JSONObject jObj = pve_action("/nodes/" + node + "/qemu", RestClient.RequestMethod.GET, null);
 		JSONArray data2 = jObj.getJSONArray("data");
 		for (int i = 0; i < data2.length(); i++) {
-			res.add(new VmQemu(data2.getJSONObject(i)));
+			res.add(getQemuVM(node, data2.getJSONObject(i).getInt("vmid")));
 		}
 		return res;
 	}
@@ -309,7 +309,7 @@ public class Pve2Api {
 			IOException {
 		JSONObject jObj = pve_action("/nodes/" + node + "/qemu/" + vmid + "/config",
 				RestClient.RequestMethod.GET, null);
-		return new VmQemu(jObj.getJSONObject("data"));
+		return new VmQemu(node, vmid, jObj.getJSONObject("data"));
 	}
 
 	/*public void getQemuConfig(String node, int vmid, VmQemu vm) throws JSONException,

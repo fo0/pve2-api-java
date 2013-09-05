@@ -55,9 +55,11 @@ public class QemuTest {
 			jsonObject.put("virtio1", "local:111/vm-111-disk-2.qcow2,iops_rd=10,iops_wr=10,mbps_wr=1.1,size=1G");
 			jsonObject.put("ide0", "local:111/vm-111-disk-1.qcow2,mbps_rd=10,size=1G");
 			jsonObject.put("ide1","local:iso/grml64-small_2013.02.iso,media=cdrom,size=166M");
-			vm = new VmQemu(jsonObject);
+			vm = new VmQemu("nod2", 100, jsonObject);
 		}catch (JSONException e){
 			fail("Json exception: " + e.getMessage());
+		}catch (Exception e){
+			fail(e.getMessage());
 		}
 		assertEquals(vm.getName(), "test");
 		//assertEquals(vm.getVmid(), 100);
@@ -94,6 +96,7 @@ public class QemuTest {
 		}catch (Exception e){
 			fail(e.getMessage());
 		}
+		assertEquals("pxetest", "pxetest");
 		//System.out.println(vmQemu.getName());
 	}
 	@Test
@@ -103,6 +106,16 @@ public class QemuTest {
 		}catch (Exception e){
 			fail(e.getMessage());
 		}
+	}
+	@Test
+	public void testGetQemuVm(){
+		VmQemu vmQemu = null;
+		try {
+			vmQemu = pve2Api.getQemuVM("nod2", 111);
+		}catch (Exception e){
+			fail(e.getMessage());
+		}
+		assertEquals(vmQemu.getVmid(), 111);
 	}
 	/*@Test
 	public void testAssignDisk() {
