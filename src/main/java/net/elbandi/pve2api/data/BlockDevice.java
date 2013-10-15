@@ -66,6 +66,15 @@ public abstract class BlockDevice {
 		int digitGroups = (int) (Math.log10(size)/Math.log10(1024));
 		return new DecimalFormat("#,##0.#").format(size/Math.pow(1024, digitGroups)) + units[digitGroups];
 	}
+	public String getCreateString() throws VmQemu.MissingFieldException{
+		StringBuilder stringBuilder = new StringBuilder();
+		if(volume == null) throw new VmQemu.MissingFieldException("Field volume is not set");
+		stringBuilder.append("volume=" + volume.getVolid());
+		stringBuilder.append(",media=" + media);
+		stringBuilder.append(",size=" + volume.getSize());
+		return stringBuilder.toString();
+
+	}
 	public static String parseMedia(String blockDeviceData){
 		String mediaPattern = "media=(cdrom|disk)";
 		Pattern r = Pattern.compile(mediaPattern);

@@ -289,9 +289,9 @@ public class Pve2Api {
 		JSONObject jsonObject = pve_action("/nodes/" + node + "/storage/" + storage + "/content", RestClient.RequestMethod.POST, data);
 		return getVolumeById(node, storage, jsonObject.getString("data"));
 	}
-	public void assignDiskToQemu(int vmid, String node, QemuDisk qemuDisk) throws JSONException, LoginException, IOException, VmQemu.MissingFieldException {
+	public void assignDiskToQemu(int vmid, String node, BlockDevice blockDevice) throws JSONException, LoginException, IOException, VmQemu.MissingFieldException {
 		Map<String, String> data = new HashMap<String, String>();
-		data.put(qemuDisk.getBus() + Integer.toString(qemuDisk.getDevice()), qemuDisk.getCreateString());
+		data.put(blockDevice.getBus() + Integer.toString(blockDevice.getDevice()), blockDevice.getCreateString());
 		JSONObject jsonObject = pve_action("/nodes/" + node + "/qemu/" + Integer.toString(vmid) + "/config", RestClient.RequestMethod.PUT, data);
 		System.out.println(jsonObject.toString());
 	}

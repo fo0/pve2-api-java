@@ -68,6 +68,7 @@ public class QemuDisk extends BlockDevice {
 		string += readableFileSize(this.size);
 		return string;
 	}*/
+	@Override
 	public String getCreateString() throws VmQemu.MissingFieldException{
 		StringBuilder stringBuilder = new StringBuilder();
 		if(volume == null) throw new VmQemu.MissingFieldException("Field volume is not set");
