@@ -68,10 +68,14 @@ public abstract class BlockDevice {
 	}
 	public String getCreateString() throws VmQemu.MissingFieldException{
 		StringBuilder stringBuilder = new StringBuilder();
-		if(volume == null) throw new VmQemu.MissingFieldException("Field volume is not set");
-		stringBuilder.append("volume=" + volume.getVolid());
+		/*if(volume == null) throw new VmQemu.MissingFieldException("Field volume is not set");*/
+		if (volume == null){
+			stringBuilder.append("none");
+		} else {
+			stringBuilder.append("volume=" + volume.getVolid());
+			stringBuilder.append(",size=" + volume.getSize());
+		}
 		stringBuilder.append(",media=" + media);
-		stringBuilder.append(",size=" + volume.getSize());
 		return stringBuilder.toString();
 
 	}

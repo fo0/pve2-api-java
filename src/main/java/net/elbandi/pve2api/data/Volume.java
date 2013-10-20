@@ -14,8 +14,8 @@ import org.json.JSONObject;
 public class Volume {
 	private String filename; //required only for volume creation
 	private String volid;
-	private String format;
-	private String content;
+	private String format;  //e.g qcow2
+	private String content; //e.g images
 	private int vmid;
 	private String parent;
 	private long used;

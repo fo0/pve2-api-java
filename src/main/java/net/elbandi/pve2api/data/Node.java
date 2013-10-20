@@ -6,6 +6,7 @@ import org.json.JSONObject;
 
 public class Node {
 	private float cpu;
+	private String name;
 	private CpuInfo cpuinfo;
 	private String kversion;
 	private String pveversion;
@@ -18,7 +19,19 @@ public class Node {
 	private long rootfs_free;
 	private long rootfs_total;
 
-	public Node(JSONObject data) throws JSONException {
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+	public Node(String name){
+		this.name = name;
+	}
+	public Node(String name, JSONObject data) throws JSONException {
+		this.name = name;
+
 		JSONObject o;
 		cpu = (float) data.getDouble("cpu");
 		cpuinfo = new CpuInfo(data.getJSONObject("cpuinfo"));

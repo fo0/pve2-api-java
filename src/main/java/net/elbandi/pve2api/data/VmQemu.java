@@ -8,7 +8,7 @@ import net.elbandi.pve2api.Pve2Api;
 import net.elbandi.pve2api.data.resource.Adapter;
 import net.elbandi.pve2api.data.resource.Cdrom;
 import net.elbandi.pve2api.data.resource.QemuDisk;
-import net.elbandi.pve2api.data.resource.Node;
+//import net.elbandi.pve2api.data.resource.Node;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -19,7 +19,7 @@ public class VmQemu {
 
 	private String name;
 	private Status vmStatus;
-	private net.elbandi.pve2api.data.resource.Node node;
+	private Node node;
 	/* enable/disable acpi */
 	private boolean acpi;
 	/* boot order [acdn]{1,4} */
@@ -71,7 +71,7 @@ public class VmQemu {
 		map.put("name", name);
 		/*map.put("acpi", Boolean.toString(acpi));*/
 		map.put("boot", boot);
-		if(bootdisk != null) map.put("bootdisk", bootdisk);
+		if(bootdisk != null && bootdisk.trim().length() != 0) map.put("bootdisk", bootdisk);
 		if(cores > 0) map.put("cores", Integer.toString(cores));
 		if(cpu != null) map.put("cpu", cpu);
 		if (cpuunits > 0) map.put("cpuunits", Integer.toString(cpuunits));
@@ -90,7 +90,44 @@ public class VmQemu {
 			if(blockDeviceMap.get(device) instanceof QemuDisk){
 				blockDevice =  ((QemuDisk)blockDeviceMap.get(device)).getCreateString();
 			} else if(blockDeviceMap.get(device) instanceof Cdrom){
-				blockDevice = ((Cdrom)blockDeviceMap.get(device)).toString();
+				blockDevice = ((Cdrom)blockDeviceMap.get(device)).getCreateString();
+			} else {
+				throw new DeviceException("Unknown type of block device: " + blockDeviceMap.get(device).getClass());
+			}
+			map.put(device, blockDevice);
+		}
+		for(String adapter : adapterMap.keySet()){
+			map.put(adapter, adapterMap.get(adapter).getCreateString());
+		}
+		return  map;
+	}
+	public Map<String, String> toUpdateMap() throws DeviceException, MissingFieldException{
+		Map<String, String> map = new HashMap<String, String>();
+		//if(vmid == 0) throw new MissingFieldException("Field 'vmid' is missing");
+		//map.put("vmid", Integer.toString(vmid));
+		map.put("name", name);
+		/*map.put("acpi", Boolean.toString(acpi));*/
+		map.put("boot", boot);
+		if(bootdisk != null && bootdisk.trim().length() != 0) map.put("bootdisk", bootdisk);
+		if(cores > 0) map.put("cores", Integer.toString(cores));
+		if(cpu != null) map.put("cpu", cpu);
+		if (cpuunits > 0) map.put("cpuunits", Integer.toString(cpuunits));
+		if(desc != null) map.put("description", desc);
+		if(digest != null) map.put("digest", digest);
+		if(freeze){ map.put("freeze",  "1"); } else { map.put("freeze",  "0"); }
+
+		if(memory > 0) map.put("memory", Integer.toString(memory));
+		/*map.put("kvm", Boolean.toString(kvm));*/
+		if(onboot) { map.put("onboot", "1"); } else { map.put("onboot", "0"); }
+		/*map.put("onboot", Boolean.toString(onboot));*/
+		if(ostype != null) map.put("ostype", ostype);
+
+		for(String device : blockDeviceMap.keySet()){
+			String blockDevice;
+			if(blockDeviceMap.get(device) instanceof QemuDisk){
+				blockDevice =  ((QemuDisk)blockDeviceMap.get(device)).getCreateString();
+			} else if(blockDeviceMap.get(device) instanceof Cdrom){
+				blockDevice = ((Cdrom)blockDeviceMap.get(device)).getCreateString();
 			} else {
 				throw new DeviceException("Unknown type of block device: " + blockDeviceMap.get(device).getClass());
 			}
@@ -108,7 +145,8 @@ public class VmQemu {
 		this.vmid = vmid;
 		this.name = name;
 	}
-	public VmQemu(String node, int vmid, JSONObject data) throws JSONException, LoginException, IOException {
+	public VmQemu(Node node, int vmid, JSONObject data) throws JSONException, LoginException, IOException {
+		this.node = node;
 		name = data.getString("name");
 		acpi = data.optInt("acpi", 1) == 1;
 		cpu = data.getString("cpu");
@@ -132,9 +170,14 @@ public class VmQemu {
 				String url = BlockDevice.parseUrl(blockDeviceString);
 				if(BlockDevice.parseMedia(blockDeviceString) != null && BlockDevice.parseMedia(blockDeviceString).equals("cdrom")){
 					Cdrom cdrom = new Cdrom(k.replaceAll("[0-9]+", ""), Integer.parseInt(k.substring(k.length() - 1)));
-					cdrom.setMedia(BlockDevice.parseMedia(blockDeviceString));
-				 	cdrom.setStorage(storage);
-					cdrom.setVolume(Pve2Api.getPve2Api().getVolumeById(node, storage, storage + ":" + url));
+					if(!storage.equals("none")){
+						cdrom.setMedia(BlockDevice.parseMedia(blockDeviceString));
+						cdrom.setStorage(storage);
+						/*if(Pve2Api.getPve2Api().getVolumeById(node.getName(), storage, storage + ":" + url) == null){
+							throw new JSONException("getVolumeById returns null, parameters: " + node.getName() + "," + storage + "," + url);
+						}*/
+						cdrom.setVolume(Pve2Api.getPve2Api().getVolumeById(node.getName(), storage, storage + ":" + url));
+					}
 					blockDeviceMap.put(cdrom.getBus() + cdrom.getDevice(), cdrom);
 				} else {
 					QemuDisk qemuDisk = new QemuDisk(k.replaceAll("[0-9]+", ""), Integer.parseInt(k.substring(k.length() - 1)));
@@ -144,7 +187,7 @@ public class VmQemu {
 					qemuDisk.setMbps_rd(QemuDisk.parseMbps_rd(blockDeviceString));
 					qemuDisk.setMbps_wr(QemuDisk.parseMbps_wr(blockDeviceString));
 					qemuDisk.setMedia(BlockDevice.parseMedia(blockDeviceString));
-					qemuDisk.setVolume(Pve2Api.getPve2Api().getVolumeById(node, storage, storage + ":" + url));
+					qemuDisk.setVolume(Pve2Api.getPve2Api().getVolumeById(node.getName(), storage, storage + ":" + url));
 
 					blockDeviceMap.put(qemuDisk.getBus() + qemuDisk.getDevice(), qemuDisk);
 				}

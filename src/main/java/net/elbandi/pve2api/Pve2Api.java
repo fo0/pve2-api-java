@@ -146,15 +146,13 @@ public class Pve2Api {
 	// TODO: setOptions
 	// TODO: getClusterStatus
 
-	public List<net.elbandi.pve2api.data.resource.Node> getNodeList() throws JSONException, LoginException, IOException {
-		List<net.elbandi.pve2api.data.resource.Node> res = new ArrayList<net.elbandi.pve2api.data.resource.Node>();
+	public List<Node> getNodeList() throws JSONException, LoginException, IOException {
+		List<Node> res = new ArrayList<Node>();
 		JSONObject jObj = pve_action("/nodes", RestClient.RequestMethod.GET, null);
 		JSONArray data2;
 		data2 = jObj.getJSONArray("data");
 		for (int i = 0; i < data2.length(); i++) {
-			res.add(new net.elbandi.pve2api.data.resource.Node(data2.getJSONObject(i)));
-			/*JSONObject row = data2.getJSONObject(i);
-			res.add(row.getString("node"));*/
+			res.add(getNode(data2.getJSONObject(i).getString("node")));
 		}
 		return res;
 	}
@@ -163,7 +161,7 @@ public class Pve2Api {
 		JSONObject jObj = pve_action("/nodes/" + name + "/status", RestClient.RequestMethod.GET,
 				null);
 		JSONObject data2 = jObj.getJSONObject("data");
-		return new Node(data2);
+		return new Node(name, data2);
 	}
 
 	public List<Service> getNodeServices(String name) throws JSONException, LoginException,
@@ -309,7 +307,7 @@ public class Pve2Api {
 			IOException {
 		JSONObject jObj = pve_action("/nodes/" + node + "/qemu/" + vmid + "/config",
 				RestClient.RequestMethod.GET, null);
-		return new VmQemu(node, vmid, jObj.getJSONObject("data"));
+		return new VmQemu(getNode(node), vmid, jObj.getJSONObject("data"));
 	}
 
 	/*public void getQemuConfig(String node, int vmid, VmQemu vm) throws JSONException,
@@ -364,11 +362,14 @@ public class Pve2Api {
 		return jObj.getString("data");
 	}
 
-	// TODO: QemuCreate(String node, int vmid, params)
 	public String createQemu(VmQemu vm) throws LoginException, JSONException, IOException, VmQemu.DeviceException, VmQemu.MissingFieldException {
 		Map<String, String> params = vm.toMap(); //adding this to make it throw MissingFieldException right now in case node is not specified
-		JSONObject jsonObject = pve_action("/nodes/" + vm.getNode().getNode() + "/qemu", RestClient.RequestMethod.POST, vm.toMap());
+		JSONObject jsonObject = pve_action("/nodes/" + vm.getNode().getName() + "/qemu", RestClient.RequestMethod.POST, vm.toMap());
 		return jsonObject.getString("data");
+	}
+
+	public void updateQemu(VmQemu vm) throws LoginException, JSONException, IOException, VmQemu.DeviceException, VmQemu.MissingFieldException {
+		pve_action("/nodes/" + vm.getNode().getName() + "/qemu/" + vm.getVmid() + "/config", RestClient.RequestMethod.PUT, vm.toUpdateMap());
 	}
 	// TODO: QemuUpdate(String node, int vmid, params) PUT
 
