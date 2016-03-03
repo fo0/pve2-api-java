@@ -1,14 +1,6 @@
 package net.elbandi.pve2api;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-
 import org.apache.http.HttpEntity;
-//import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -20,7 +12,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
-//import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
 import org.apache.http.conn.ssl.SSLSocketFactory;
@@ -33,218 +24,271 @@ import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.BasicHttpContext;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+import java.net.URLEncoder;
+
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+
+import java.util.ArrayList;
+
+
 // Based on http://lukencode.com/2010/04/27/calling-web-services-in-android-using-httpclient/
 public class RestClient {
 
-	private boolean authentication;
-	private ArrayList<NameValuePair> headers;
+    private static final HttpClient client = new DefaultHttpClient();
 
-	private String jsonBody;
-	private String message;
+    public static final String SYS_PROP_SOCKS_PROXY_HOST = "socksProxyHost";
+    public static final String SYS_PROP_SOCKS_PROXY_PORT = "socksProxyPort";
 
-	private ArrayList<NameValuePair> params;
-	private String response;
-	private int responseCode;
+    public enum RequestMethod {
 
-	private String url;
-	private static HttpClient client = new DefaultHttpClient();
+        DELETE,
+        GET,
+        POST,
+        PUT
+    }
 
-	// HTTP Basic Authentication
-	private String username;
-	private String password;
+    private boolean authentication;
+    private final ArrayList<NameValuePair> headers;
 
-	public enum RequestMethod {
-		DELETE, GET, POST, PUT
-	}
+    private String jsonBody;
+    private String message;
 
-	public static final String SYS_PROP_SOCKS_PROXY_HOST = "socksProxyHost";
-	public static final String SYS_PROP_SOCKS_PROXY_PORT = "socksProxyPort";
+    private final ArrayList<NameValuePair> params;
+    private String response;
+    private int responseCode;
 
-	public RestClient(String url) {
-		this.url = url;
-		try {
-			SSLSocketFactory sslsf = new SSLSocketFactory(new TrustSelfSignedStrategy(),
-					new AllowAllHostnameVerifier());
-			Scheme https = new Scheme("https", 8006, sslsf);
-			client.getConnectionManager().getSchemeRegistry().register(https);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		// HttpHost proxy = new HttpHost("192.168.1.1", 8081);
-		// client.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY,
-		// proxy);
-		// System.setProperty(SYS_PROP_SOCKS_PROXY_HOST, "192.168.1.1");
-		// System.setProperty(SYS_PROP_SOCKS_PROXY_PORT, ""+1234);
-		params = new ArrayList<NameValuePair>();
-		headers = new ArrayList<NameValuePair>();
-	}
+    private String url;
 
-	// Be warned that this is sent in clear text, don't use basic auth unless
-	// you have to.
-	public void addBasicAuthentication(String user, String pass) {
-		authentication = true;
-		username = user;
-		password = pass;
-	}
+    // HTTP Basic Authentication
+    private String username;
+    private String password;
 
-	public void addHeader(String name, String value) {
-		headers.add(new BasicNameValuePair(name, value));
-	}
+    public RestClient(String url) {
 
-	public void clearHeader() {
-		headers.clear();
-	}
+        this.url = url;
 
-	public void addParam(String name, String value) {
-		params.add(new BasicNameValuePair(name, value));
-	}
+        try {
+            SSLSocketFactory sslsf = new SSLSocketFactory(new TrustSelfSignedStrategy(),
+                    new AllowAllHostnameVerifier());
+            Scheme https = new Scheme("https", 8006, sslsf);
+            client.getConnectionManager().getSchemeRegistry().register(https);
+        } catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException | UnrecoverableKeyException e) {
+            e.printStackTrace();
+        }
 
-	public void clearParams() {
-		params.clear();
-	}
+        params = new ArrayList<>();
+        headers = new ArrayList<>();
+    }
 
-	public void execute(RequestMethod method) throws Exception {
-		switch (method) {
-			case GET: {
-				HttpGet request = new HttpGet(url + addGetParams());
-				request = (HttpGet) addHeaderParams(request);
-				executeRequest(request, url);
-				break;
-			}
-			case POST: {
-				HttpPost request = new HttpPost(url);
-				request = (HttpPost) addHeaderParams(request);
-				request = (HttpPost) addBodyParams(request);
-				executeRequest(request, url);
-				break;
-			}
-			case PUT: {
-				HttpPut request = new HttpPut(url);
-				request = (HttpPut) addHeaderParams(request);
-				request = (HttpPut) addBodyParams(request);
-				executeRequest(request, url);
-				break;
-			}
-			case DELETE: {
-				HttpDelete request = new HttpDelete(url);
-				request = (HttpDelete) addHeaderParams(request);
-				executeRequest(request, url);
-			}
-		}
-	}
+    // Be warned that this is sent in clear text, don't use basic auth unless
+    // you have to.
+    public void addBasicAuthentication(String user, String pass) {
 
-	private HttpUriRequest addHeaderParams(HttpUriRequest request) throws Exception {
-		for (NameValuePair h : headers) {
-			request.addHeader(h.getName(), h.getValue());
-		}
+        authentication = true;
+        username = user;
+        password = pass;
+    }
 
-		if (authentication) {
-			UsernamePasswordCredentials creds = new UsernamePasswordCredentials(username, password);
-			request.addHeader(new BasicScheme().authenticate(creds, request, new BasicHttpContext()));
-		}
 
-		return request;
-	}
+    public void addHeader(String name, String value) {
 
-	private HttpUriRequest addBodyParams(HttpUriRequest request) throws Exception {
-		if (jsonBody != null) {
-			request.addHeader("Content-Type", "application/json");
-			if (request instanceof HttpPost)
-				((HttpPost) request).setEntity(new StringEntity(jsonBody, "UTF-8"));
-			else if (request instanceof HttpPut)
-				((HttpPut) request).setEntity(new StringEntity(jsonBody, "UTF-8"));
+        headers.add(new BasicNameValuePair(name, value));
+    }
 
-		} else if (!params.isEmpty()) {
-			if (request instanceof HttpPost)
-				((HttpPost) request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
-			else if (request instanceof HttpPut)
-				((HttpPut) request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
-		}
-		return request;
-	}
 
-	private String addGetParams() throws Exception {
-		StringBuffer combinedParams = new StringBuffer();
-		if (!params.isEmpty()) {
-			combinedParams.append("?");
-			for (NameValuePair p : params) {
-				combinedParams.append((combinedParams.length() > 1 ? "&" : "") + p.getName() + "="
-						+ URLEncoder.encode(p.getValue(), "UTF-8"));
-			}
-		}
-		return combinedParams.toString();
-	}
+    public void clearHeader() {
 
-	public String getErrorMessage() {
-		return message;
-	}
+        headers.clear();
+    }
 
-	public String getResponse() {
-		return response;
-	}
 
-	public int getResponseCode() {
-		return responseCode;
-	}
+    public void addParam(String name, String value) {
 
-	public void setJSONString(String data) {
-		jsonBody = data;
-	}
+        params.add(new BasicNameValuePair(name, value));
+    }
 
-	private void executeRequest(HttpUriRequest request, String url) {
 
-		HttpParams params = client.getParams();
+    public void clearParams() {
 
-		// Setting 30 second timeouts
-		HttpConnectionParams.setConnectionTimeout(params, 30 * 1000);
-		HttpConnectionParams.setSoTimeout(params, 30 * 1000);
+        params.clear();
+    }
 
-		HttpResponse httpResponse;
 
-		try {
-			httpResponse = client.execute(request);
-			responseCode = httpResponse.getStatusLine().getStatusCode();
-			message = httpResponse.getStatusLine().getReasonPhrase();
+    public void execute(RequestMethod method) throws Exception {
 
-			HttpEntity entity = httpResponse.getEntity();
+        switch (method) {
+            case GET: {
+                HttpGet request = new HttpGet(url + addGetParams());
+                request = (HttpGet) addHeaderParams(request);
+                executeRequest(request, url);
+                break;
+            }
 
-			if (entity != null) {
+            case POST: {
+                HttpPost request = new HttpPost(url);
+                request = (HttpPost) addHeaderParams(request);
+                request = (HttpPost) addBodyParams(request);
+                executeRequest(request, url);
+                break;
+            }
 
-				InputStream instream = entity.getContent();
-				response = convertStreamToString(instream);
+            case PUT: {
+                HttpPut request = new HttpPut(url);
+                request = (HttpPut) addHeaderParams(request);
+                request = (HttpPut) addBodyParams(request);
+                executeRequest(request, url);
+                break;
+            }
 
-				// Closing the input stream will trigger connection release
-				instream.close();
-			}
+            case DELETE: {
+                HttpDelete request = new HttpDelete(url);
+                request = (HttpDelete) addHeaderParams(request);
+                executeRequest(request, url);
+            }
+        }
+    }
 
-		} catch (ClientProtocolException e) {
-			client.getConnectionManager().shutdown();
-			e.printStackTrace();
-		} catch (IOException e) {
-			client.getConnectionManager().shutdown();
-			e.printStackTrace();
-		}
-	}
 
-	private static String convertStreamToString(InputStream is) {
+    private HttpUriRequest addHeaderParams(HttpUriRequest request) throws Exception {
 
-		BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-		StringBuilder sb = new StringBuilder();
+        for (NameValuePair h : headers) {
+            request.addHeader(h.getName(), h.getValue());
+        }
 
-		String line = null;
-		try {
-			while ((line = reader.readLine()) != null) {
-				sb.append(line + "\n");
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				is.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		return sb.toString();
-	}
+        if (authentication) {
+            UsernamePasswordCredentials creds = new UsernamePasswordCredentials(username, password);
+            request.addHeader(new BasicScheme().authenticate(creds, request, new BasicHttpContext()));
+        }
+
+        return request;
+    }
+
+
+    private HttpUriRequest addBodyParams(HttpUriRequest request) throws Exception {
+
+        if (jsonBody != null) {
+            request.addHeader("Content-Type", "application/json");
+
+            if (request instanceof HttpPost)
+                ((HttpPost) request).setEntity(new StringEntity(jsonBody, "UTF-8"));
+            else if (request instanceof HttpPut)
+                ((HttpPut) request).setEntity(new StringEntity(jsonBody, "UTF-8"));
+        } else if (!params.isEmpty()) {
+            if (request instanceof HttpPost)
+                ((HttpPost) request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+            else if (request instanceof HttpPut)
+                ((HttpPut) request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+        }
+
+        return request;
+    }
+
+
+    private String addGetParams() throws Exception {
+
+        StringBuilder combinedParams = new StringBuilder();
+
+        if (!params.isEmpty()) {
+            combinedParams.append("?");
+
+            for (NameValuePair p : params) {
+                combinedParams.append(combinedParams.length() > 1 ? "&" : "")
+                    .append(p.getName())
+                    .append("=")
+                    .append(URLEncoder.encode(p.getValue(), "UTF-8"));
+            }
+        }
+
+        return combinedParams.toString();
+    }
+
+
+    public String getErrorMessage() {
+
+        return message;
+    }
+
+
+    public String getResponse() {
+
+        return response;
+    }
+
+
+    public int getResponseCode() {
+
+        return responseCode;
+    }
+
+
+    public void setJSONString(String data) {
+
+        jsonBody = data;
+    }
+
+
+    private void executeRequest(HttpUriRequest request, String url) {
+
+        HttpParams requestParams = client.getParams();
+
+        // Setting 30 second timeouts
+        HttpConnectionParams.setConnectionTimeout(requestParams, 30 * 1000);
+        HttpConnectionParams.setSoTimeout(requestParams, 30 * 1000);
+
+        HttpResponse httpResponse;
+
+        try {
+            httpResponse = client.execute(request);
+            responseCode = httpResponse.getStatusLine().getStatusCode();
+            message = httpResponse.getStatusLine().getReasonPhrase();
+
+            HttpEntity entity = httpResponse.getEntity();
+
+            if (entity != null) {
+                try(InputStream instream = entity.getContent()) {
+                    response = convertStreamToString(instream);
+                    // Closing the input stream will trigger connection release
+                }
+            }
+        } catch (ClientProtocolException e) {
+            client.getConnectionManager().shutdown();
+            e.printStackTrace();
+        } catch (IOException e) {
+            client.getConnectionManager().shutdown();
+            e.printStackTrace();
+        }
+    }
+
+
+    private static String convertStreamToString(InputStream is) {
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        StringBuilder sb = new StringBuilder();
+
+        String line = null;
+
+        try {
+            while ((line = reader.readLine()) != null) {
+                sb.append(line + "\n");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                is.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return sb.toString();
+    }
 }
