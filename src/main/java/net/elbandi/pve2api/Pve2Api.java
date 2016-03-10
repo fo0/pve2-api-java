@@ -11,6 +11,7 @@ import net.elbandi.pve2api.data.Storage;
 import net.elbandi.pve2api.data.Task;
 import net.elbandi.pve2api.data.VmOpenvz;
 import net.elbandi.pve2api.data.VmQemu;
+import net.elbandi.pve2api.data.VmQemuUpdate;
 import net.elbandi.pve2api.data.VncData;
 import net.elbandi.pve2api.data.Volume;
 
@@ -197,7 +198,7 @@ public class Pve2Api {
 
     public List<Node> getNodeList() throws JSONException, LoginException, IOException {
 
-        List<Node> res = new ArrayList<Node>();
+        List<Node> res = new ArrayList<>();
         JSONObject jObj = pve_action("/nodes", RestClient.RequestMethod.GET, null);
         JSONArray data2;
         data2 = jObj.getJSONArray("data");
@@ -512,9 +513,32 @@ public class Pve2Api {
         pve_action("/nodes/" + vm.getNode().getName() + "/qemu/" + vm.getVmid() + "/config",
             RestClient.RequestMethod.PUT, vm.toMap());
     }
-    // TODO: QemuUpdate(String node, int vmid, params) PUT
 
-    protected String deleteQemu(String node, int vmid) throws LoginException, JSONException, IOException {
+
+    /**
+     * @param  nodeName  the name of the node the VM runs on.
+     * @param  vmId  the id of the vm to update
+     * @param  update  the update data
+     * @param  async  true if request should return immediately, false if it should wait for finished update.
+     *
+     * @throws  JSONException
+     * @throws  LoginException
+     * @throws  IOException
+     */
+    public void updateQemu(String nodeName, int vmId, VmQemuUpdate update, boolean async) throws JSONException,
+        LoginException, IOException {
+
+        RestClient.RequestMethod method = RestClient.RequestMethod.PUT;
+
+        if (async) {
+            method = RestClient.RequestMethod.POST;
+        }
+
+        pve_action(String.format("/nodes/%s/qemu/%d/config", nodeName, vmId), method, update.toMap());
+    }
+
+
+    public String deleteQemu(String node, int vmid) throws LoginException, JSONException, IOException {
 
         JSONObject jObj = pve_action("/nodes/" + node + "/qemu/" + vmid, RestClient.RequestMethod.DELETE, null);
 

@@ -32,6 +32,7 @@ public class VmQemu {
     /* e.g ide0 */
     private String bootdisk;
     private int cores;
+    private int sockets;
 
     private String desc;
 
@@ -40,6 +41,7 @@ public class VmQemu {
 
     private boolean onboot;
     private String ostype;
+    private boolean kvm = true;
 
     private List<BlockDevice> devices = new ArrayList<>();
     private List<Adapter> adapters = new ArrayList<>();
@@ -64,12 +66,14 @@ public class VmQemu {
 
         name = config.getString("name");
         cores = config.getInt("cores");
+        sockets = config.getInt("sockets");
         desc = config.optString("description");
         bootdisk = config.optString("bootdisk");
         boot = config.optString("boot");
         memory = config.getInt("memory");
         onboot = config.optInt("onboot") == 1;
         ostype = config.getString("ostype");
+        kvm = config.optInt("kvm") == 1;
         vmStatus = new Status(status);
 
         this.vmid = vmid;
@@ -153,6 +157,10 @@ public class VmQemu {
             map.put("cores", Integer.toString(cores));
         }
 
+        if (sockets > 0) {
+            map.put("sockets", Integer.toString(sockets));
+        }
+
         if (desc != null) {
             map.put("description", desc);
         }
@@ -169,6 +177,12 @@ public class VmQemu {
 
         if (ostype != null) {
             map.put("ostype", ostype);
+        }
+
+        if (kvm) {
+            map.put("kvm", "1");
+        } else {
+            map.put("kvm", "0");
         }
 
         for (BlockDevice device : devices) {
@@ -201,6 +215,12 @@ public class VmQemu {
     }
 
 
+    public int getSockets() {
+
+        return sockets;
+    }
+
+
     public String getDesc() {
 
         return desc;
@@ -225,6 +245,12 @@ public class VmQemu {
     }
 
 
+    public boolean isKvm() {
+
+        return kvm;
+    }
+
+
     public String getName() {
 
         return name;
@@ -246,6 +272,90 @@ public class VmQemu {
     public List<Adapter> getAdapters() {
 
         return adapters;
+    }
+
+
+    public void setName(String name) {
+
+        this.name = name;
+    }
+
+
+    public void setVmStatus(Status vmStatus) {
+
+        this.vmStatus = vmStatus;
+    }
+
+
+    public void setNode(Node node) {
+
+        this.node = node;
+    }
+
+
+    public void setBoot(String boot) {
+
+        this.boot = boot;
+    }
+
+
+    public void setBootdisk(String bootdisk) {
+
+        this.bootdisk = bootdisk;
+    }
+
+
+    public void setCores(int cores) {
+
+        this.cores = cores;
+    }
+
+
+    public void setSockets(int sockets) {
+
+        this.sockets = sockets;
+    }
+
+
+    public void setDesc(String desc) {
+
+        this.desc = desc;
+    }
+
+
+    public void setMemory(int memory) {
+
+        this.memory = memory;
+    }
+
+
+    public void setOnboot(boolean onboot) {
+
+        this.onboot = onboot;
+    }
+
+
+    public void setOstype(String ostype) {
+
+        this.ostype = ostype;
+    }
+
+
+    public void setKvm(boolean kvm) {
+
+        this.kvm = kvm;
+    }
+
+
+    public void setDevices(List<BlockDevice> devices) {
+
+        this.devices = devices;
+    }
+
+
+    public void setAdapters(List<Adapter> adapters) {
+
+        this.adapters = adapters;
     }
 
     public class DeviceException extends Exception {
