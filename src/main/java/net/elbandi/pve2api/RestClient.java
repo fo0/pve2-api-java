@@ -19,6 +19,7 @@ import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
@@ -42,7 +43,7 @@ import java.util.ArrayList;
 // Based on http://lukencode.com/2010/04/27/calling-web-services-in-android-using-httpclient/
 public class RestClient {
 
-    private static final HttpClient client = new DefaultHttpClient();
+    private static final HttpClient CLIENT = new DefaultHttpClient(new PoolingClientConnectionManager());
 
     public static final String SYS_PROP_SOCKS_PROXY_HOST = "socksProxyHost";
     public static final String SYS_PROP_SOCKS_PROXY_PORT = "socksProxyPort";
@@ -79,7 +80,7 @@ public class RestClient {
             SSLSocketFactory sslsf = new SSLSocketFactory(new TrustSelfSignedStrategy(),
                     new AllowAllHostnameVerifier());
             Scheme https = new Scheme("https", 8006, sslsf);
-            client.getConnectionManager().getSchemeRegistry().register(https);
+            CLIENT.getConnectionManager().getSchemeRegistry().register(https);
         } catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException | UnrecoverableKeyException e) {
             e.printStackTrace();
         }
@@ -237,7 +238,7 @@ public class RestClient {
 
     private void executeRequest(HttpUriRequest request, String url) {
 
-        HttpParams requestParams = client.getParams();
+        HttpParams requestParams = CLIENT.getParams();
 
         // Setting 30 second timeouts
         HttpConnectionParams.setConnectionTimeout(requestParams, 30 * 1000);
@@ -246,7 +247,7 @@ public class RestClient {
         HttpResponse httpResponse;
 
         try {
-            httpResponse = client.execute(request);
+            httpResponse = CLIENT.execute(request);
             responseCode = httpResponse.getStatusLine().getStatusCode();
             message = httpResponse.getStatusLine().getReasonPhrase();
 
@@ -259,10 +260,10 @@ public class RestClient {
                 }
             }
         } catch (ClientProtocolException e) {
-            client.getConnectionManager().shutdown();
+            CLIENT.getConnectionManager().shutdown();
             e.printStackTrace();
         } catch (IOException e) {
-            client.getConnectionManager().shutdown();
+            CLIENT.getConnectionManager().shutdown();
             e.printStackTrace();
         }
     }
