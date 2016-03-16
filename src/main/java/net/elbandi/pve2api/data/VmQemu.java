@@ -59,8 +59,8 @@ public class VmQemu {
     }
 
 
-    public VmQemu(Node node, int vmid, JSONObject config, JSONObject status) throws JSONException, LoginException,
-        IOException {
+    public VmQemu(Pve2Api api, Node node, int vmid, JSONObject config, JSONObject status) throws JSONException,
+        LoginException, IOException {
 
         this.node = node;
 
@@ -95,8 +95,7 @@ public class VmQemu {
                         /*if(Pve2Api.getPve2Api().getVolumeById(node.getName(), storage, storage + ":" + url) == null){
                                 throw new JSONException("getVolumeById returns null, parameters: " + node.getName() + "," + storage + "," + url);
                         }*/
-                        cdrom.setVolume(Pve2Api.getPve2Api()
-                            .getVolumeById(node.getName(), storage, storage + ":" + url));
+                        cdrom.setVolume(api.getVolumeById(node.getName(), storage, storage + ":" + url));
                     }
 
                     devices.add(cdrom);
@@ -105,8 +104,7 @@ public class VmQemu {
                             Integer.parseInt(k.substring(k.length() - 1)));
                     qemuDisk.setStorage(storage);
                     qemuDisk.setMedia(BlockDevice.parseMedia(blockDeviceString));
-                    qemuDisk.setVolume(Pve2Api.getPve2Api()
-                        .getVolumeById(node.getName(), storage, storage + ":" + url));
+                    qemuDisk.setVolume(api.getVolumeById(node.getName(), storage, storage + ":" + url));
 
                     devices.add(qemuDisk);
                 }

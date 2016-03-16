@@ -8,14 +8,14 @@ import java.util.regex.Pattern;
 
 public abstract class BlockDevice {
 
-    private String name;
+    private final String name;
     private String storage;
 
     /* media type, disk or cdrom */
     private String media;
 
     /* system interface. virtio, unused, scsi, sata or ide */
-    private String bus;
+    private final String bus;
     private Volume volume;
 
     private int device;
@@ -55,12 +55,6 @@ public abstract class BlockDevice {
     public void setVolume(Volume volume) {
 
         this.volume = volume;
-    }
-
-
-    public void setBus(String bus) {
-
-        this.bus = bus;
     }
 
 
@@ -114,11 +108,11 @@ public abstract class BlockDevice {
         if (volume == null) {
             stringBuilder.append("none");
         } else {
-            stringBuilder.append("volume=" + volume.getVolid());
-            stringBuilder.append(",size=" + volume.getSize());
+            stringBuilder.append("volume=").append(volume.getVolid());
+            stringBuilder.append(",size=").append(volume.getSize());
         }
 
-        stringBuilder.append(",media=" + media);
+        stringBuilder.append(",media=").append(media);
 
         return stringBuilder.toString();
     }

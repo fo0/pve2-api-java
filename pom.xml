@@ -6,7 +6,7 @@
 
     <groupId>pve2-api-java</groupId>
     <artifactId>pve2-api-java</artifactId>
-    <version>1.2-SNAPSHOT</version>
+    <version>1.3.0-SNAPSHOT</version>
     <dependencies>
         <dependency>
             <groupId>org.json</groupId>
@@ -22,6 +22,11 @@
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
             <version>4.2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.18</version>
         </dependency>
     </dependencies>
     <build>

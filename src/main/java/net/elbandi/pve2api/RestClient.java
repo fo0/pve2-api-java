@@ -3,8 +3,6 @@ package net.elbandi.pve2api;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpDelete;
@@ -17,18 +15,19 @@ import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
-import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
-import org.apache.http.protocol.BasicHttpContext;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 
 import java.net.URLEncoder;
 
@@ -37,13 +36,15 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 
-import java.util.ArrayList;
+import java.util.List;
 
 
 // Based on http://lukencode.com/2010/04/27/calling-web-services-in-android-using-httpclient/
+// but now fixed for allowing threading...
 public class RestClient {
 
     private static final HttpClient CLIENT = new DefaultHttpClient(new PoolingClientConnectionManager());
+    private static final Logger LOG = LoggerFactory.getLogger(RestClient.class);
 
     public static final String SYS_PROP_SOCKS_PROXY_HOST = "socksProxyHost";
     public static final String SYS_PROP_SOCKS_PROXY_PORT = "socksProxyPort";
@@ -56,25 +57,7 @@ public class RestClient {
         PUT
     }
 
-    private boolean authentication;
-    private final ArrayList<NameValuePair> headers;
-
-    private String jsonBody;
-    private String message;
-
-    private final ArrayList<NameValuePair> params;
-    private String response;
-    private int responseCode;
-
-    private String url;
-
-    // HTTP Basic Authentication
-    private String username;
-    private String password;
-
-    public RestClient(String url) {
-
-        this.url = url;
+    public RestClient() {
 
         try {
             SSLSocketFactory sslsf = new SSLSocketFactory(new TrustSelfSignedStrategy(),
@@ -82,118 +65,90 @@ public class RestClient {
             Scheme https = new Scheme("https", 8006, sslsf);
             CLIENT.getConnectionManager().getSchemeRegistry().register(https);
         } catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException | UnrecoverableKeyException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Could not instanciate RestClient.", e);
         }
-
-        params = new ArrayList<>();
-        headers = new ArrayList<>();
     }
 
-    // Be warned that this is sent in clear text, don't use basic auth unless
-    // you have to.
-    public void addBasicAuthentication(String user, String pass) {
-
-        authentication = true;
-        username = user;
-        password = pass;
-    }
-
-
-    public void addHeader(String name, String value) {
-
-        headers.add(new BasicNameValuePair(name, value));
-    }
-
-
-    public void clearHeader() {
-
-        headers.clear();
-    }
-
-
-    public void addParam(String name, String value) {
-
-        params.add(new BasicNameValuePair(name, value));
-    }
-
-
-    public void clearParams() {
-
-        params.clear();
-    }
-
-
-    public void execute(RequestMethod method) throws Exception {
+    public Response execute(RequestMethod method, String url, String jsonBody, List<NameValuePair> params,
+        List<NameValuePair> headers) throws IOException {
 
         switch (method) {
             case GET: {
-                HttpGet request = new HttpGet(url + addGetParams());
-                request = (HttpGet) addHeaderParams(request);
-                executeRequest(request, url);
-                break;
+                HttpGet request = new HttpGet(url + createQueryString(params));
+                request = (HttpGet) addHeaderParams(request, headers);
+
+                return executeRequest(request);
             }
 
             case POST: {
                 HttpPost request = new HttpPost(url);
-                request = (HttpPost) addHeaderParams(request);
-                request = (HttpPost) addBodyParams(request);
-                executeRequest(request, url);
-                break;
+                request = (HttpPost) addHeaderParams(request, headers);
+                request = (HttpPost) addBodyParams(request, jsonBody, params);
+
+                return executeRequest(request);
             }
 
             case PUT: {
                 HttpPut request = new HttpPut(url);
-                request = (HttpPut) addHeaderParams(request);
-                request = (HttpPut) addBodyParams(request);
-                executeRequest(request, url);
-                break;
+                request = (HttpPut) addHeaderParams(request, headers);
+                request = (HttpPut) addBodyParams(request, jsonBody, params);
+
+                return executeRequest(request);
             }
 
             case DELETE: {
                 HttpDelete request = new HttpDelete(url);
-                request = (HttpDelete) addHeaderParams(request);
-                executeRequest(request, url);
+                request = (HttpDelete) addHeaderParams(request, headers);
+
+                return executeRequest(request);
             }
         }
+
+        return null;
     }
 
 
-    private HttpUriRequest addHeaderParams(HttpUriRequest request) throws Exception {
+    private HttpUriRequest addHeaderParams(HttpUriRequest request, List<NameValuePair> headers) {
+
+        if (headers == null) {
+            return request;
+        }
 
         for (NameValuePair h : headers) {
             request.addHeader(h.getName(), h.getValue());
         }
 
-        if (authentication) {
-            UsernamePasswordCredentials creds = new UsernamePasswordCredentials(username, password);
-            request.addHeader(new BasicScheme().authenticate(creds, request, new BasicHttpContext()));
+        return request;
+    }
+
+
+    private HttpUriRequest addBodyParams(HttpUriRequest request, String jsonBody, List<NameValuePair> params) {
+
+        try {
+            if (jsonBody != null) {
+                request.addHeader("Content-Type", "application/json");
+
+                if (request instanceof HttpPost) {
+                    ((HttpPost) request).setEntity(new StringEntity(jsonBody, "UTF-8"));
+                } else if (request instanceof HttpPut) {
+                    ((HttpPut) request).setEntity(new StringEntity(jsonBody, "UTF-8"));
+                }
+            } else if (!params.isEmpty()) {
+                if (request instanceof HttpPost) {
+                    ((HttpPost) request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+                } else if (request instanceof HttpPut) {
+                    ((HttpPut) request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+                }
+            }
+        } catch (UnsupportedEncodingException ex) {
+            throw new IllegalStateException("UTF-8 not available for encoding!", ex);
         }
 
         return request;
     }
 
 
-    private HttpUriRequest addBodyParams(HttpUriRequest request) throws Exception {
-
-        if (jsonBody != null) {
-            request.addHeader("Content-Type", "application/json");
-
-            if (request instanceof HttpPost)
-                ((HttpPost) request).setEntity(new StringEntity(jsonBody, "UTF-8"));
-            else if (request instanceof HttpPut)
-                ((HttpPut) request).setEntity(new StringEntity(jsonBody, "UTF-8"));
-        } else if (!params.isEmpty()) {
-            if (request instanceof HttpPost)
-                ((HttpPost) request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
-            else if (request instanceof HttpPut)
-                ((HttpPut) request).setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
-        }
-
-        return request;
-    }
-
-
-    private String addGetParams() throws Exception {
+    private String createQueryString(List<NameValuePair> params) throws UnsupportedEncodingException {
 
         StringBuilder combinedParams = new StringBuilder();
 
@@ -212,31 +167,7 @@ public class RestClient {
     }
 
 
-    public String getErrorMessage() {
-
-        return message;
-    }
-
-
-    public String getResponse() {
-
-        return response;
-    }
-
-
-    public int getResponseCode() {
-
-        return responseCode;
-    }
-
-
-    public void setJSONString(String data) {
-
-        jsonBody = data;
-    }
-
-
-    private void executeRequest(HttpUriRequest request, String url) {
+    private Response executeRequest(HttpUriRequest request) throws IOException {
 
         HttpParams requestParams = CLIENT.getParams();
 
@@ -246,30 +177,28 @@ public class RestClient {
 
         HttpResponse httpResponse;
 
-        try {
-            httpResponse = CLIENT.execute(request);
-            responseCode = httpResponse.getStatusLine().getStatusCode();
-            message = httpResponse.getStatusLine().getReasonPhrase();
+        httpResponse = CLIENT.execute(request);
 
-            HttpEntity entity = httpResponse.getEntity();
+        int responseCode = httpResponse.getStatusLine().getStatusCode();
+        String reasonPhrase = httpResponse.getStatusLine().getReasonPhrase();
 
-            if (entity != null) {
-                try(InputStream instream = entity.getContent()) {
-                    response = convertStreamToString(instream);
-                    // Closing the input stream will trigger connection release
-                }
+        HttpEntity entity = httpResponse.getEntity();
+
+        if (entity != null) {
+            try(InputStream instream = entity.getContent()) {
+                String response = convertStreamToString(instream);
+
+                return new Response(response, responseCode, reasonPhrase);
+
+                // Closing the input stream will trigger connection release
             }
-        } catch (ClientProtocolException e) {
-            CLIENT.getConnectionManager().shutdown();
-            e.printStackTrace();
-        } catch (IOException e) {
-            CLIENT.getConnectionManager().shutdown();
-            e.printStackTrace();
         }
+
+        return new Response(null, responseCode, reasonPhrase);
     }
 
 
-    private static String convertStreamToString(InputStream is) {
+    private static String convertStreamToString(InputStream is) throws IOException {
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
         StringBuilder sb = new StringBuilder();
@@ -278,18 +207,65 @@ public class RestClient {
 
         try {
             while ((line = reader.readLine()) != null) {
-                sb.append(line + "\n");
+                sb.append(line).append("\n");
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         } finally {
             try {
                 is.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException ex) {
+                LOG.warn("Failed to close input stream", ex);
             }
         }
 
         return sb.toString();
+    }
+
+    public class Response {
+
+        private String response;
+        private int responseCode;
+        private String errorMessage;
+
+        public Response(String response, int responseCode, String errorMessage) {
+
+            this.errorMessage = errorMessage;
+            this.response = response;
+            this.responseCode = responseCode;
+        }
+
+        public String getErrorMessage() {
+
+            return errorMessage;
+        }
+
+
+        public void setErrorMessage(String message) {
+
+            this.errorMessage = message;
+        }
+
+
+        public String getResponse() {
+
+            return response;
+        }
+
+
+        public void setResponse(String response) {
+
+            this.response = response;
+        }
+
+
+        public int getResponseCode() {
+
+            return responseCode;
+        }
+
+
+        public void setResponseCode(int responseCode) {
+
+            this.responseCode = responseCode;
+        }
     }
 }

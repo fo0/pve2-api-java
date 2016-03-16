@@ -1,5 +1,6 @@
 package net.elbandi.pve2api;
 
+import net.elbandi.pve2api.RestClient.Response;
 import net.elbandi.pve2api.data.AplInfo;
 import net.elbandi.pve2api.data.BlockDevice;
 import net.elbandi.pve2api.data.ClusterLog;
@@ -15,9 +16,15 @@ import net.elbandi.pve2api.data.VmQemuUpdate;
 import net.elbandi.pve2api.data.VncData;
 import net.elbandi.pve2api.data.Volume;
 
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -34,11 +41,13 @@ import javax.security.auth.login.LoginException;
 
 public class Pve2Api {
 
-    private static Pve2Api pve2ApiHolder = null;
-    protected String pve_hostname;
-    protected String pve_username;
-    protected String pve_realm;
-    protected String pve_password;
+    private static final RestClient REST_CLIENT = new RestClient();
+    private static final Logger LOG = LoggerFactory.getLogger(RestClient.class);
+
+    private final String pve_hostname;
+    private final String pve_username;
+    private final String pve_realm;
+    private final String pve_password;
 
     private String pve_login_ticket;
     private String pve_login_token;
@@ -52,38 +61,37 @@ public class Pve2Api {
         this.pve_realm = pve_realm;
 
         pve_login_ticket_timestamp = null;
-
-        pve2ApiHolder = this;
     }
 
     public void login() throws JSONException, LoginException, IOException {
 
-        RestClient client = new RestClient("https://" + pve_hostname
-                + ":8006/api2/json/access/ticket");
-        client.addParam("username", pve_username);
-        client.addParam("password", pve_password);
-        client.addParam("realm", pve_realm);
+        String url = String.format("https://%s:8006/api2/json/access/ticket", pve_hostname);
 
-        try {
-            client.execute(RestClient.RequestMethod.POST);
-        } catch (Exception e) {
-            throw new IOException(e);
-        }
+        List<NameValuePair> params = new ArrayList<>();
+        params.add(new BasicNameValuePair("username", pve_username));
+        params.add(new BasicNameValuePair("password", pve_password));
+        params.add(new BasicNameValuePair("realm", pve_realm));
 
-        if (client.getResponseCode() == HttpURLConnection.HTTP_OK) {
-            // Successfully connected
-            JSONObject jObj = new JSONObject(client.getResponse());
-            JSONObject data = jObj.getJSONObject("data");
-            pve_login_ticket = data.getString("ticket");
-            pve_login_token = data.getString("CSRFPreventionToken");
-            pve_login_ticket_timestamp = new Date(); // decode from token
+        Response response = REST_CLIENT.execute(RestClient.RequestMethod.POST, url, null, params, null);
 
-            return;
-        } else if (client.getResponseCode() == HttpURLConnection.HTTP_INTERNAL_ERROR) {
-            throw new LoginException("Login failed. Please try again");
-        } else {
-            throw new IOException(client.getErrorMessage());
-            // error connecting to server, lets just return an error
+        switch (response.getResponseCode()) {
+            case HttpURLConnection.HTTP_OK:
+
+                // Successfully connected
+                JSONObject jObj = new JSONObject(response.getResponse());
+                JSONObject data = jObj.getJSONObject("data");
+                pve_login_ticket = data.getString("ticket");
+                pve_login_token = data.getString("CSRFPreventionToken");
+                pve_login_ticket_timestamp = new Date(); // decode from token
+
+                break;
+
+            case HttpURLConnection.HTTP_INTERNAL_ERROR:
+                throw new LoginException("Login failed. Please try again");
+
+            default:
+                throw new IOException(response.getErrorMessage());
+                // error connecting to server, lets just return an error
         }
     }
 
@@ -97,45 +105,51 @@ public class Pve2Api {
     }
 
 
-    private JSONObject pve_action(String Path, RestClient.RequestMethod method, Map<String, String> data)
+    private JSONObject pve_action(String path, RestClient.RequestMethod method, Map<String, String> data)
         throws JSONException, LoginException, IOException {
 
         pve_check_login_ticket();
 
-        if (!Path.startsWith("/"))
-            Path = "/".concat(Path);
+        if (!path.startsWith("/"))
+            path = "/".concat(path);
 
-        RestClient client = new RestClient("https://" + this.pve_hostname + ":8006/api2/json" + Path);
+        String url = String.format("https://%s:8006/api2/json%s", pve_hostname, path);
+
+        List<NameValuePair> headers = new ArrayList<>();
 
         if (!method.equals(RestClient.RequestMethod.GET))
-            client.addHeader("CSRFPreventionToken", pve_login_token);
+            headers.add(new BasicNameValuePair("CSRFPreventionToken", pve_login_token));
 
-        client.addHeader("Cookie", "PVEAuthCookie=" + pve_login_ticket);
+        headers.add(new BasicNameValuePair("Cookie", "PVEAuthCookie=" + pve_login_ticket));
+
+        List<NameValuePair> params = new ArrayList<>();
 
         if (data != null) {
             for (Map.Entry<String, String> entry : data.entrySet()) {
-                client.addParam(entry.getKey(), entry.getValue());
+                params.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
             }
         }
 
-        try {
-            client.execute(method);
-        } catch (Exception e) {
-            throw new IOException(e);
-        }
+        Response response = REST_CLIENT.execute(method, url, null, params, headers);
 
-        if (client.getResponseCode() == HttpURLConnection.HTTP_OK) {
-            // Successfully connected
-            return new JSONObject(client.getResponse());
-        } else if (client.getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
-            throw new LoginException(client.getErrorMessage());
-        } else if (client.getResponseCode() == HttpURLConnection.HTTP_BAD_REQUEST) {
-            // TODO: find a better exception
-            System.out.println("Response:" + client.getResponse());
-            throw new IOException(client.getErrorMessage());
-        } else {
-            throw new IOException(client.getErrorMessage());
-            // error connecting to server, lets just return an error
+        switch (response.getResponseCode()) {
+            case HttpURLConnection.HTTP_OK:
+
+                // Successfully connected
+                return new JSONObject(response.getResponse());
+
+            case HttpURLConnection.HTTP_UNAUTHORIZED:
+                throw new LoginException(response.getErrorMessage());
+
+            case HttpURLConnection.HTTP_BAD_REQUEST:
+
+                // TODO: find a better exception
+                LOG.warn("Response:" + response.getResponse());
+                throw new IOException(response.getErrorMessage());
+
+            default:
+                throw new IOException(response.getErrorMessage());
+                // error connecting to server, lets just return an error
         }
     }
 
@@ -143,7 +157,7 @@ public class Pve2Api {
     // TODO cluster adatok
     public List<ClusterLog> getClusterLog() throws JSONException, LoginException, IOException {
 
-        List<ClusterLog> res = new ArrayList<ClusterLog>();
+        List<ClusterLog> res = new ArrayList<>();
         JSONObject jObj = pve_action("/cluster/log", RestClient.RequestMethod.GET, null);
         JSONArray data2 = jObj.getJSONArray("data");
 
@@ -157,7 +171,7 @@ public class Pve2Api {
 
     public List<Resource> getResources() throws JSONException, LoginException, IOException {
 
-        List<Resource> res = new ArrayList<Resource>();
+        List<Resource> res = new ArrayList<>();
         JSONObject jObj = pve_action("/cluster/resources", RestClient.RequestMethod.GET, null);
         JSONArray data2 = jObj.getJSONArray("data");
 
@@ -180,7 +194,7 @@ public class Pve2Api {
 
     public List<Task> getTasks() throws JSONException, LoginException, IOException {
 
-        List<Task> res = new ArrayList<Task>();
+        List<Task> res = new ArrayList<>();
         JSONObject jObj = pve_action("/cluster/tasks", RestClient.RequestMethod.GET, null);
         JSONArray data2 = jObj.getJSONArray("data");
 
@@ -222,7 +236,7 @@ public class Pve2Api {
 
     public List<Service> getNodeServices(String name) throws JSONException, LoginException, IOException {
 
-        List<Service> res = new ArrayList<Service>();
+        List<Service> res = new ArrayList<>();
         JSONObject jObj = pve_action("/nodes/" + name + "/services", RestClient.RequestMethod.GET, null);
         JSONArray data2 = jObj.getJSONArray("data");
 
@@ -236,7 +250,7 @@ public class Pve2Api {
 
     public List<AplInfo> getNodeAppliances(String node) throws JSONException, LoginException, IOException {
 
-        List<AplInfo> res = new ArrayList<AplInfo>();
+        List<AplInfo> res = new ArrayList<>();
         JSONObject jObj = pve_action("/nodes/" + node + "/aplinfo", RestClient.RequestMethod.GET, null);
         JSONArray data2 = jObj.getJSONArray("data");
 
@@ -276,7 +290,7 @@ public class Pve2Api {
 
     public List<String> getNodeSyslog(String name) throws JSONException, LoginException, IOException {
 
-        List<String> res = new ArrayList<String>();
+        List<String> res = new ArrayList<>();
         JSONObject jObj = pve_action("/nodes/" + name + "/syslog", RestClient.RequestMethod.GET, null);
         JSONArray data2 = jObj.getJSONArray("data");
 
@@ -290,7 +304,7 @@ public class Pve2Api {
 
     public List<Network> getNodeNetwork(String name) throws JSONException, LoginException, IOException {
 
-        List<Network> res = new ArrayList<Network>();
+        List<Network> res = new ArrayList<>();
         JSONObject jObj = pve_action("/nodes/" + name + "/network", RestClient.RequestMethod.GET, null);
         JSONArray data2 = jObj.getJSONArray("data");
 
@@ -312,7 +326,7 @@ public class Pve2Api {
 
     public List<Storage> getStorages() throws JSONException, LoginException, IOException {
 
-        List<Storage> res = new ArrayList<Storage>();
+        List<Storage> res = new ArrayList<>();
         JSONObject jObj = pve_action("/storage", RestClient.RequestMethod.GET, null);
         JSONArray data2 = jObj.getJSONArray("data");
 
@@ -326,7 +340,7 @@ public class Pve2Api {
 
     public List<Volume> getVolumes(String node, String storage) throws JSONException, LoginException, IOException {
 
-        List<Volume> volumes = new ArrayList<Volume>();
+        List<Volume> volumes = new ArrayList<>();
         JSONObject jsonObject = pve_action("/nodes/" + node + "/storage/" + storage + "/content",
                 RestClient.RequestMethod.GET, null);
         JSONArray jsonArray = jsonObject.getJSONArray("data");
@@ -378,7 +392,7 @@ public class Pve2Api {
     public Volume createVolume(String node, String storage, String filename, String size, Integer vmid, String format)
         throws LoginException, JSONException, IOException, VmQemu.MissingFieldException {
 
-        Map<String, String> data = new HashMap<String, String>();
+        Map<String, String> data = new HashMap<>();
         data.put("filename", filename);
         data.put("size", size);
         data.put("vmid", Integer.toString(vmid));
@@ -394,18 +408,17 @@ public class Pve2Api {
     public void assignDiskToQemu(int vmid, String node, BlockDevice blockDevice) throws JSONException, LoginException,
         IOException, VmQemu.MissingFieldException {
 
-        Map<String, String> data = new HashMap<String, String>();
+        Map<String, String> data = new HashMap<>();
         data.put(blockDevice.getBus() + Integer.toString(blockDevice.getDevice()), blockDevice.getCreateString());
 
-        JSONObject jsonObject = pve_action("/nodes/" + node + "/qemu/" + Integer.toString(vmid) + "/config",
-                RestClient.RequestMethod.PUT, data);
-        System.out.println(jsonObject.toString());
+        pve_action("/nodes/" + node + "/qemu/" + Integer.toString(vmid) + "/config", RestClient.RequestMethod.PUT,
+            data);
     }
 
 
     public List<VmQemu> getQemuVMs(String node) throws JSONException, LoginException, IOException {
 
-        List<VmQemu> res = new ArrayList<VmQemu>();
+        List<VmQemu> res = new ArrayList<>();
         JSONObject jObj = pve_action("/nodes/" + node + "/qemu", RestClient.RequestMethod.GET, null);
         JSONArray data2 = jObj.getJSONArray("data");
 
@@ -424,7 +437,7 @@ public class Pve2Api {
         JSONObject status = pve_action("/nodes/" + node + "/qemu/" + vmid + "/status/current",
                 RestClient.RequestMethod.GET, null);
 
-        return new VmQemu(getNode(node), vmid, config.getJSONObject("data"), status.getJSONObject("data"));
+        return new VmQemu(this, getNode(node), vmid, config.getJSONObject("data"), status.getJSONObject("data"));
     }
 
 
@@ -702,7 +715,7 @@ public class Pve2Api {
 
     public List<VmOpenvz> getOpenvzCTs(String node) throws JSONException, LoginException, IOException {
 
-        List<VmOpenvz> res = new ArrayList<VmOpenvz>();
+        List<VmOpenvz> res = new ArrayList<>();
         JSONObject jObj = pve_action("/nodes/" + node + "/openvz", RestClient.RequestMethod.GET, null);
         JSONArray data2 = jObj.getJSONArray("data");
 
@@ -740,7 +753,6 @@ public class Pve2Api {
     public String createOpenvz(String node, VmOpenvz vm) throws LoginException, JSONException, IOException {
 
         Map<String, String> parameterData = vm.getCreateParams();
-        System.out.println(parameterData.toString());
 
         String path = "/nodes/" + node + "/openvz";
         JSONObject jsonObject = pve_action(path, RestClient.RequestMethod.POST, parameterData);
@@ -761,7 +773,7 @@ public class Pve2Api {
         JSONObject jObj = pve_action("/nodes/" + node + "/openvz/" + vmid + "/initlog", RestClient.RequestMethod.GET,
                 data);
         JSONArray data2 = jObj.getJSONArray("data");
-        Map<Integer, String> res = new HashMap<Integer, String>();
+        Map<Integer, String> res = new HashMap<>();
 
         for (int i = 0; i < data2.length(); i++) {
             JSONObject o = data2.getJSONObject(i);
@@ -910,12 +922,6 @@ public class Pve2Api {
         JSONException, IOException {
 
         return migrateOpenvz(node, vmid, new PveParams("target", target).add("online", online));
-    }
-
-
-    public static Pve2Api getPve2Api() {
-
-        return pve2ApiHolder;
     }
 
     // TODO: refactor to use BasicNameValuePair
