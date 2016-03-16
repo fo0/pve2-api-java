@@ -68,6 +68,7 @@ public class Storage {
     private String digest;
     private EnumSet<Content> content;
     private String nodes;
+    private String format;
     private boolean shared;
     private boolean disable;
 
@@ -79,6 +80,7 @@ public class Storage {
         shared = data.optInt("shared") == 1;
         disable = data.optInt("disable") == 1;
         nodes = data.optString("nodes", "");
+        format = data.optString("format", "qcow2");
     }
 
 
@@ -135,6 +137,12 @@ public class Storage {
     public boolean isDisable() {
 
         return disable;
+    }
+
+
+    public String getFormat() {
+
+        return format;
     }
 
 

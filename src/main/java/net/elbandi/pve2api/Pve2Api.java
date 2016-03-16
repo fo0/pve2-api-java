@@ -6,6 +6,7 @@ import net.elbandi.pve2api.data.BlockDevice;
 import net.elbandi.pve2api.data.ClusterLog;
 import net.elbandi.pve2api.data.Network;
 import net.elbandi.pve2api.data.Node;
+import net.elbandi.pve2api.data.QemuDiskUpdate;
 import net.elbandi.pve2api.data.Resource;
 import net.elbandi.pve2api.data.Service;
 import net.elbandi.pve2api.data.Storage;
@@ -412,6 +413,15 @@ public class Pve2Api {
         data.put(blockDevice.getBus() + Integer.toString(blockDevice.getDevice()), blockDevice.getCreateString());
 
         pve_action("/nodes/" + node + "/qemu/" + Integer.toString(vmid) + "/config", RestClient.RequestMethod.PUT,
+            data);
+    }
+
+
+    public void resizeQemuDisk(int vmid, String node, QemuDiskUpdate diskUpdate) throws JSONException, LoginException,
+        IOException {
+
+        Map<String, String> data = diskUpdate.toMap();
+        pve_action("/nodes/" + node + "/qemu/" + Integer.toString(vmid) + "/resize", RestClient.RequestMethod.PUT,
             data);
     }
 

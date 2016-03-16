@@ -138,8 +138,8 @@ public class VmQemuUpdate {
         }
 
         if (networkAdapters != null && !networkAdapters.isEmpty()) {
-            for (int i = 0; i < networkAdapters.size(); i++) {
-                map.put("net" + i, networkAdapters.get(i).getCreateString());
+            for (Adapter adapter : networkAdapters) {
+                map.put(adapter.getName(), adapter.getCreateString());
             }
         }
 
