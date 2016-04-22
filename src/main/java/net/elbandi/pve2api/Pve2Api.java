@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +43,8 @@ public class Pve2Api {
 
     private static final RestClient REST_CLIENT = new RestClient();
     private static final Logger LOG = LoggerFactory.getLogger(RestClient.class);
+    private static final Object LOGIN_LOCK = new Object();
+    private static final long ONE_HOUR_MILLIS = 1000 * 60 * 60;
 
     private final String pve_hostname;
     private final String pve_username;
@@ -52,7 +53,7 @@ public class Pve2Api {
 
     private String pve_login_ticket;
     private String pve_login_token;
-    private Date pve_login_ticket_timestamp;
+    private Long pve_login_ticket_timestamp;
 
     public Pve2Api(String pve_hostname, String pve_username, String pve_realm, String pve_password) {
 
@@ -83,7 +84,7 @@ public class Pve2Api {
                 JSONObject data = jObj.getJSONObject("data");
                 pve_login_ticket = data.getString("ticket");
                 pve_login_token = data.getString("CSRFPreventionToken");
-                pve_login_ticket_timestamp = new Date(); // decode from token
+                pve_login_ticket_timestamp = System.currentTimeMillis();
 
                 break;
 
@@ -99,14 +100,15 @@ public class Pve2Api {
 
     public void pve_check_login_ticket() throws LoginException, JSONException, IOException {
 
-        if (pve_login_ticket_timestamp == null
-                || pve_login_ticket_timestamp.getTime() >= (new Date()).getTime() - 3600) {
-            login(); // shoud drop exception
+        synchronized (LOGIN_LOCK) {
+            if (pve_login_ticket_timestamp == null || pve_login_ticket_timestamp < System.currentTimeMillis() + 3600) {
+                login(); // shoud drop exception
+            }
         }
     }
 
 
-    private JSONObject pve_action(String path, RestClient.RequestMethod method, Map<String, String> data)
+    private JSONObject pve_action(String path, RestClient.RequestMethod method, Map<String, String> data, int tryNumber)
         throws JSONException, LoginException, IOException {
 
         pve_check_login_ticket();
@@ -118,10 +120,13 @@ public class Pve2Api {
 
         List<NameValuePair> headers = new ArrayList<>();
 
-        if (!method.equals(RestClient.RequestMethod.GET))
-            headers.add(new BasicNameValuePair("CSRFPreventionToken", pve_login_token));
+        synchronized (LOGIN_LOCK) {
+            if (!method.equals(RestClient.RequestMethod.GET)) {
+                headers.add(new BasicNameValuePair("CSRFPreventionToken", pve_login_token));
+            }
 
-        headers.add(new BasicNameValuePair("Cookie", "PVEAuthCookie=" + pve_login_ticket));
+            headers.add(new BasicNameValuePair("Cookie", "PVEAuthCookie=" + pve_login_ticket));
+        }
 
         List<NameValuePair> params = new ArrayList<>();
 
@@ -140,7 +145,17 @@ public class Pve2Api {
                 return new JSONObject(response.getResponse());
 
             case HttpURLConnection.HTTP_UNAUTHORIZED:
-                throw new LoginException(response.getErrorMessage());
+
+                if (tryNumber == 0) {
+                    // try to login and retry
+                    synchronized (LOGIN_LOCK) {
+                        login();
+                    }
+
+                    return pve_action(path, method, data, tryNumber + 1);
+                } else {
+                    throw new LoginException(response.getErrorMessage());
+                }
 
             case HttpURLConnection.HTTP_BAD_REQUEST:
 
@@ -152,6 +167,13 @@ public class Pve2Api {
                 throw new IOException(response.getErrorMessage());
                 // error connecting to server, lets just return an error
         }
+    }
+
+
+    private JSONObject pve_action(String path, RestClient.RequestMethod method, Map<String, String> data)
+        throws JSONException, LoginException, IOException {
+
+        return pve_action(path, method, data, 0);
     }
 
 
