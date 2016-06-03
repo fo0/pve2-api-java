@@ -159,6 +159,9 @@ public abstract class BlockDevice {
 
     public static String parseStorage(String blockDeviceData) {
 
+        // storage can, in some cases, be prefixed with 'file=', just remove that
+        blockDeviceData = blockDeviceData.replace("file=","");
+
         String storagePattern = "^[a-z0-9_\\-.]+";
         Pattern r = Pattern.compile(storagePattern);
         Matcher m = r.matcher(blockDeviceData);
